@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: rag-assistant
+
+server:
+  port: 8080
+
+ollama:
+  base-url: http://localhost:11434
+  chat-model: qwen2.5:7b
+  embedding-model: nomic-embed-text
+
+rag:
+  chunk-size: 700
+  chunk-overlap: 100
+  top-k: 3
+  min-score: 0.2
+
+logging:
+  level:
+    com.example.ragassistant: INFO
