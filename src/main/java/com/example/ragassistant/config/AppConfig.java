@@ -1,5 +1,6 @@
 package com.example.ragassistant.config;
 
+import com.example.ragassistant.parser.DocumentParser;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,5 +15,10 @@ public class AppConfig {
         return RestClient.builder()
                 .baseUrl(properties.baseUrl())
                 .build();
+    }
+
+    @Bean
+    DocumentParser documentParser() {
+        return new DocumentParser();
     }
 }

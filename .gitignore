@@ -62,3 +62,6 @@ desktop.ini
 ### Uploads / local data (future) ###
 uploads/
 data/
+
+### Project docs (local only) ###
+docs/
