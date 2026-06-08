@@ -5,13 +5,15 @@ import com.example.ragassistant.dto.DocumentResponse;
 import com.example.ragassistant.service.DocumentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-@RestController("/api/documents")
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "Documents", description = "문서 업로드·목록")
+@RestController
+@RequestMapping("/api/documents")
 public class DocumentController {
 
     private final DocumentService documentService;
@@ -20,12 +22,14 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    @PostMapping("/upload")
+    @Operation(summary = "문서 업로드", description = "TXT/MD 파일 업로드 후 DB 저장")
+    @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<DocumentResponse> upload(@RequestParam("file") MultipartFile file) {
         DocumentResponse response = documentService.upload(file);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "문서 목록", description = "저장된 문서 메타 정보 목록")
     @GetMapping
     public DocumentListResponse list() {
         return documentService.list();

@@ -25,6 +25,7 @@ dependencies {
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
     runtimeOnly 'org.postgresql:postgresql'
     testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

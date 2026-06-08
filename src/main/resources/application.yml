@@ -8,6 +8,17 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 5MB
+  profiles:
+    active: local   # 선택: local에서만 debug API + swagger 세부 제어할 때
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false
 
 server:
   port: 8080

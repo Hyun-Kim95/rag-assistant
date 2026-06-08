@@ -7,8 +7,13 @@ import com.example.ragassistant.service.OllamaService;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "Debug", description = "개발용 디버그 API (운영 비노출 권장)")
+@Profile("local")
 @RestController
 @RequestMapping("/api/debug")
 public class DebugController {
