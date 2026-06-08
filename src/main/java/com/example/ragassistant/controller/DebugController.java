@@ -1,34 +1,49 @@
 package com.example.ragassistant.controller;
 
+import com.example.ragassistant.dto.ChunkResponse;
+import com.example.ragassistant.service.ChunkService;
 import com.example.ragassistant.service.OllamaService;
+
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/debug/ollama")
+@RequestMapping("/api/debug")
 public class DebugController {
 
     private final OllamaService ollamaService;
+    private final ChunkService chunkService;
 
-    public DebugController(OllamaService ollamaService) {
+    public DebugController(OllamaService ollamaService, ChunkService chunkService) {
         this.ollamaService = ollamaService;
+        this.chunkService = chunkService;
     }
 
-    @GetMapping("/chat")
+    @GetMapping("/ollama/chat")
     public Map<String, String> chat(@RequestParam(defaultValue = "Hello") String prompt) {
         return Map.of("response", ollamaService.chat(prompt));
     }
 
-    @GetMapping("/embed")
+    @GetMapping("/ollama/embed")
     public Map<String, Object> embed(@RequestParam(defaultValue = "hello world") String text) {
         List<Double> embedding = ollamaService.embed(text);
         return Map.of(
                 "dimensions", embedding.size(),
                 "preview", embedding.subList(0, Math.min(5, embedding.size()))
+        );
+    }
+
+    @GetMapping("/documents/{id}/chunks")
+    public Map<String, Object> chunks(@PathVariable Long id) {
+        List<ChunkResponse> chunks = chunkService.chunkByDocumentId(id).stream()
+                .map(ChunkResponse::from)
+                .toList();
+        return Map.of(
+                "documentId", id,
+                "chunkCount", chunks.size(),
+                "chunks", chunks
         );
     }
 }

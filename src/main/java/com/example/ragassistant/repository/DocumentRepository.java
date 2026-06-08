@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class DocumentRepository {
@@ -37,6 +38,16 @@ public class DocumentRepository {
         );
         document.setId(id);
         return document;
+    }
+
+    public Optional<Document> findById(Long id) {
+        String sql = """
+                SELECT id, name, content_type, content, created_at
+                FROM documents
+                WHERE id = ?
+                """;
+        List<Document> results = jdbcTemplate.query(sql, ROW_MAPPER, id);
+        return results.stream().findFirst();
     }
 
     public List<Document> findAll() {
