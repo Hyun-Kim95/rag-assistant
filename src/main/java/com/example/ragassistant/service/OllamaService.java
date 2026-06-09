@@ -3,7 +3,12 @@ package com.example.ragassistant.service;
 import com.example.ragassistant.config.OllamaProperties;
 import java.util.List;
 import java.util.Map;
+
+import com.example.ragassistant.exception.OllamaResponseException;
+import com.example.ragassistant.exception.OllamaUnavailableException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -28,14 +33,10 @@ public class OllamaService {
                 "stream", false
         );
 
-        Map<?, ?> response = ollamaRestClient.post()
-                .uri("/api/chat")
-                .body(request)
-                .retrieve()
-                .body(Map.class);
+        Map<?, ?> response = postForMap("/api/chat", request);
 
-        if (response == null || response.get("message") == null) {
-            throw new IllegalStateException("Empty response from Ollama chat API");
+        if (response.get("message") == null) {
+            throw new OllamaResponseException("Ollama chat 응답에 message 필드가 없습니다.");
         }
 
         Object message = response.get("message");
@@ -43,7 +44,7 @@ public class OllamaService {
             return messageMap.get("content").toString();
         }
 
-        throw new IllegalStateException("Unexpected Ollama chat response format");
+        throw new OllamaResponseException("Ollama chat 응답 형식이 예상과 다릅니다.");
     }
 
     @SuppressWarnings("unchecked")
@@ -53,21 +54,48 @@ public class OllamaService {
                 "input", text
         );
 
-        Map<String, Object> response = ollamaRestClient.post()
-                .uri("/api/embed")
-                .body(request)
-                .retrieve()
-                .body(Map.class);
+        Map<String, Object> response = postForMap("/api/embed", request);
 
-        if (response == null || response.get("embeddings") == null) {
-            throw new IllegalStateException("Empty response from Ollama embed API");
+        if (response.get("embeddings") == null) {
+            throw new OllamaResponseException("Ollama embed 응답에 embeddings 필드가 없습니다.");
         }
 
         List<List<Double>> embeddings = (List<List<Double>>) response.get("embeddings");
         if (embeddings.isEmpty()) {
-            throw new IllegalStateException("No embeddings returned from Ollama");
+            throw new OllamaResponseException("Ollama embed 결과가 비어 있습니다.");
         }
 
         return embeddings.get(0);
+    }
+
+    /**
+     * Ollama POST 공통: 연결 실패(503) vs HTTP/파싱 실패(502)를 한곳에서 분류.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T postForMap(String uri, Map<String, Object> body) {
+        try {
+            T result = (T) ollamaRestClient.post()
+                    .uri(uri)
+                    .body(body)
+                    .retrieve()
+                    .body(Map.class);
+            if (result == null) {
+                throw new OllamaResponseException("Ollama 응답 body가 null입니다. uri=" + uri);
+            }
+            return result;
+        } catch (ResourceAccessException ex) {
+            // ConnectException, SocketTimeoutException 등 포함
+            throw new OllamaUnavailableException(
+                    "Ollama에 연결할 수 없습니다. Docker/서비스 실행 및 base-url("
+                            + properties.baseUrl() + ")을 확인하세요.",
+                    ex
+            );
+        } catch (HttpStatusCodeException ex) {
+            // Ollama가 4xx/5xx HTTP를 반환한 경우 (모델 없음 등)
+            throw new OllamaResponseException(
+                    "Ollama HTTP 오류: " + ex.getStatusCode().value() + " uri=" + uri,
+                    ex
+            );
+        }
     }
 }

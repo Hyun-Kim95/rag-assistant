@@ -68,4 +68,22 @@ public class DocumentRepository {
                 rs.getTimestamp("created_at").toLocalDateTime()
         );
     }
+
+    public boolean existsById(Long id) {
+        String sql = "SELECT EXISTS(SELECT 1 FROM documents WHERE id = ?)";
+        Boolean exists = jdbcTemplate.queryForObject(sql, Boolean.class, id);
+        return Boolean.TRUE.equals(exists);
+    }
+
+    public int deleteById(Long id) {
+        String sql = "DELETE FROM documents WHERE id = ?";
+        return jdbcTemplate.update(sql, id);
+    }
+
+    // 중복 업로드 검사용 (Part C)
+    public boolean existsByName(String name) {
+        String sql = "SELECT EXISTS(SELECT 1 FROM documents WHERE name = ?)";
+        Boolean exists = jdbcTemplate.queryForObject(sql, Boolean.class, name);
+        return Boolean.TRUE.equals(exists);
+    }
 }

@@ -3,6 +3,8 @@ package com.example.ragassistant.service;
 import com.example.ragassistant.domain.Document;
 import com.example.ragassistant.dto.DocumentListResponse;
 import com.example.ragassistant.dto.DocumentResponse;
+import com.example.ragassistant.exception.DocumentNotFoundException;
+import com.example.ragassistant.exception.DuplicateDocumentException;
 import com.example.ragassistant.exception.EmptyFileException;
 import com.example.ragassistant.exception.UnsupportedDocumentFormatException;
 import com.example.ragassistant.parser.DocumentParser;
@@ -35,6 +37,10 @@ public class DocumentService {
     public DocumentResponse upload(MultipartFile file) {
         validateFile(file);
         String filename = file.getOriginalFilename();
+        if (documentRepository.existsByName(filename)) {
+            throw new DuplicateDocumentException(filename);
+        }
+
         if (!documentParser.supports(filename)) {
             throw new UnsupportedDocumentFormatException(filename);
         }
@@ -95,5 +101,16 @@ public class DocumentService {
                 document.getContent().length(),
                 document.getCreatedAt()
         );
+    }
+
+    /**
+     * 문서 + 연관 chunk + embedding 삭제.
+     */
+    @Transactional
+    public void delete(Long id) {
+        if (!documentRepository.existsById(id)) {
+            throw new DocumentNotFoundException(id);
+        }
+        documentRepository.deleteById(id);
     }
 }

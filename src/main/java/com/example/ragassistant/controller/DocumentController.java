@@ -31,7 +31,14 @@ public class DocumentController {
 
     @Operation(summary = "문서 목록", description = "저장된 문서 메타 정보 목록")
     @GetMapping
-    public DocumentListResponse list() {
+    public DocumentListResponse list(){
         return documentService.list();
+    }
+
+    @Operation(summary = "문서 삭제", description = "문서와 연관 chunk·embedding을 함께 삭제")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        documentService.delete(id);
+        return ResponseEntity.noContent().build();  // 204
     }
 }
