@@ -8,6 +8,7 @@ import com.example.ragassistant.exception.UnsupportedDocumentFormatException;
 import com.example.ragassistant.parser.DocumentParser;
 import com.example.ragassistant.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -17,18 +18,20 @@ import java.util.List;
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
-
     private final DocumentParser documentParser;
+    private final VectorStoreService vectorStoreService;
 
-    public DocumentService(DocumentRepository documentRepository, DocumentParser documentParser) {
+    public DocumentService(DocumentRepository documentRepository, DocumentParser documentParser, VectorStoreService vectorStoreService) {
         this.documentRepository = documentRepository;
         this.documentParser = documentParser;
+        this.vectorStoreService = vectorStoreService;
     }
 
     /**
      * 업로드된 파일을 검증하고, 텍스트로 파싱한 뒤 DB에 저장
      * 성공 시 저장된 문서의 메타 정보(id, 이름, 길이 등)를 반환
      */
+    @Transactional
     public DocumentResponse upload(MultipartFile file) {
         validateFile(file);
         String filename = file.getOriginalFilename();
@@ -47,6 +50,9 @@ public class DocumentService {
                     content
             );
             Document saved = documentRepository.save(document);
+            // 업로드 직후 자동 인덱싱
+            vectorStoreService.indexDocument(saved);
+
             return toResponse(saved);
         } catch (IOException e) {
             throw new IllegalStateException("파일을 읽는 중 오류가 발생했습니다.", e);

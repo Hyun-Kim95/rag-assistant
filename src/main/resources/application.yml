@@ -2,7 +2,7 @@ spring:
   application:
     name: rag-assistant
   datasource:
-    url: jdbc:postgresql://localhost:5432/rag_assistant
+    url: jdbc:postgresql://localhost:15432/rag_assistant
     username: rag_assistant
   servlet:
     multipart:
@@ -33,6 +33,7 @@ rag:
   chunk-overlap: 100
   top-k: 3
   min-score: 0.2
+  embedding-dimension: 768
 
 logging:
   level:

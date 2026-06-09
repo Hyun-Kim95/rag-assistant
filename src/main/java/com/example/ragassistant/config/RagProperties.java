@@ -7,6 +7,7 @@ public record RagProperties(
         int chunkSize,
         int chunkOverlap,
         int topK,
-        double minScore   // yml은 0.2 — 아래 「주의」 참고
+        double minScore,
+        int embeddingDimension
 ) {
 }
