@@ -29,9 +29,9 @@ ollama:
   embedding-model: nomic-embed-text
 
 rag:
-  chunk-size: 700
-  chunk-overlap: 100
-  top-k: 3
+  chunk-size: 450
+  chunk-overlap: 150
+  top-k: 7
   min-score: 0.2
   embedding-dimension: 768
 

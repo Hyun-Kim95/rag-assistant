@@ -76,7 +76,7 @@ public class Chunker {
         if (text == null) {
             return "";
         }
-        return text.strip();
+        return text.replace("\r\n", "\n").replace('\r', '\n').strip();
     }
 
     /**
