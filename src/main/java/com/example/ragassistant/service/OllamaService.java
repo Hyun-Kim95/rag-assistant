@@ -30,7 +30,8 @@ public class OllamaService {
                                 "당신은 한국어로만 답하는 문서 Q&A 어시스턴트입니다. "
                                         + "중국어와 영어로 답하지 마세요."),
                         Map.of("role", "user", "content", prompt)),
-                "stream", false
+                "stream", false,
+                "options", Map.of("temperature", properties.temperature())
         );
 
         Map<?, ?> response = postForMap("/api/chat", request);

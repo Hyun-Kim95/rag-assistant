@@ -7,6 +7,7 @@ import com.example.ragassistant.exception.DocumentNotFoundException;
 import com.example.ragassistant.exception.DuplicateDocumentException;
 import com.example.ragassistant.exception.EmptyFileException;
 import com.example.ragassistant.exception.UnsupportedDocumentFormatException;
+import com.example.ragassistant.faq.FaqCatalog;
 import com.example.ragassistant.parser.DocumentParser;
 import com.example.ragassistant.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,8 @@ public class DocumentService {
     @Transactional
     public DocumentResponse upload(MultipartFile file) {
         validateFile(file);
-        String filename = file.getOriginalFilename();
+        String filename = validateFileAndGetName(file);
+
         if (documentRepository.existsByName(filename)) {
             throw new DuplicateDocumentException(filename);
         }
@@ -69,12 +71,24 @@ public class DocumentService {
         }
     }
 
+    private String validateFileAndGetName(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new EmptyFileException();
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || filename.isBlank()) {
+            throw new EmptyFileException();
+        }
+        return filename;
+    }
+
     /**
      * DB에 저장된 모든 문서의 목록을 최신순으로 조회
      * 응답에는 본문 전체(content)가 아닌 메타 정보와 textLength만 포함
      */
     public DocumentListResponse list() {
         List<DocumentResponse> documents = documentRepository.findAll().stream()
+                .filter(doc -> !FaqCatalog.isFaqDocument(doc.getName()))
                 .map(this::toResponse)
                 .toList();
         return new DocumentListResponse(documents);
@@ -112,8 +126,11 @@ public class DocumentService {
      */
     @Transactional
     public void delete(Long id) {
-        if (!documentRepository.existsById(id)) {
-            throw new DocumentNotFoundException(id);
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new DocumentNotFoundException(id));
+
+        if (FaqCatalog.isFaqDocument(document.getName())) {
+            throw new IllegalArgumentException("시스템 FAQ 문서는 삭제할 수 없습니다.");
         }
         documentRepository.deleteById(id);
     }

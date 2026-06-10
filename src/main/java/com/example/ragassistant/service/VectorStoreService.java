@@ -36,11 +36,9 @@ public class VectorStoreService {
 
     /**
      * 업로드 직후 호출. document는 documents 테이블에 이미 저장된 상태(id 필수).
-     *
-     * @return 저장된 chunk 수
      */
     @Transactional
-    public int indexDocument(Document document) {
+    public void indexDocument(Document document) {
         List<Chunk> chunks = chunker.split(document);
         for (Chunk chunk : chunks) {
             // chunk 텍스트 DB 저장
@@ -54,6 +52,27 @@ public class VectorStoreService {
                     saved.getDocumentName()
             );
         }
-        return chunks.size();
+    }
+
+    /**
+     * Chunker 없이 고정 chunk 목록을 저장·임베딩한다. (시스템 FAQ용)
+     *
+     * @return 저장된 chunk 수
+     */
+    @Transactional
+    public int indexRawChunks(Document document, List<String> chunkContents) {
+        int index = 0;
+        for (String content : chunkContents) {
+            Chunk chunk = new Chunk(
+                    document.getId(),
+                    document.getName(),
+                    index++,
+                    content
+            );
+            StoredChunk saved = chunkRepository.save(StoredChunk.fromChunk(chunk));
+            float[] vector = embeddingService.embed(saved.getContent());
+            embeddingRepository.save(saved.getId(), vector, saved.getDocumentName());
+        }
+        return chunkContents.size();
     }
 }

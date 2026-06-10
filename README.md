@@ -10,7 +10,7 @@
 
 ## 기술 스택
 
-Java 17 · Spring Boot · Ollama · PostgreSQL · Gradle
+Java 17 · Spring Boot · Ollama · PostgreSQL(pgvector) · Gradle
 
 ## License
 

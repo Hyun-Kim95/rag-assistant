@@ -65,9 +65,8 @@ public class RagService {
         }
         // no-answer로 시작 + 부연 (중국어 괄호 등)
         if (normalized.startsWith(NO_ANSWER_MESSAGE)) {
-            return true;
+            return normalized.length() <= NO_ANSWER_MESSAGE.length() + 40;
         }
-        // prompt에 넣은 다른 표현
-        return normalized.contains("문서에서 확인할 수 없");
+        return false;
     }
 }
