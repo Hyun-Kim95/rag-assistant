@@ -5,14 +5,10 @@ spring:
   config:
     activate:
       on-profile: local
-
-ollama:
-  base-url: http://localhost:11434
-  chat-model: qwen2.5:7b
-  embedding-model: nomic-embed-text
+  datasource:
+    password: your-password
 
 # spring:
 #   datasource:
-#     url: jdbc:postgresql://localhost:5432/rag_assistant
-#     username: postgres
-#     password: your-password
+#     url: jdbc:postgresql://localhost:15432/rag_assistant
+#     username: rag_assistant
