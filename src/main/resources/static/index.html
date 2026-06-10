@@ -34,6 +34,11 @@
           <input id="file-input" class="sr-only" type="file" accept=".txt,.md,text/plain,text/markdown">
         </div>
 
+        <div id="upload-loading" class="upload-loading" aria-live="polite" aria-busy="false">
+          <span class="spinner spinner--dark" aria-hidden="true"></span>
+          <span id="upload-loading-text">업로드 중…</span>
+        </div>
+
         <div id="doc-list" class="doc-list" aria-live="polite"></div>
       </section>
 

@@ -128,12 +128,20 @@ body {
 }
 
 .dropzone {
+  position: relative;
   border: 2px dashed var(--border);
   border-radius: var(--radius);
   padding: 28px 16px;
   text-align: center;
   background: #f9fafb;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.dropzone.is-uploading {
+  pointer-events: none;
+  opacity: 0.72;
+  border-color: var(--primary);
+  background: #eff6ff;
 }
 
 .dropzone.is-dragover {
@@ -402,6 +410,24 @@ body {
 }
 
 .chat-loading.is-visible {
+  display: flex;
+}
+
+.upload-loading {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  background: #eff6ff;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.upload-loading.is-visible {
   display: flex;
 }
 

@@ -8,6 +8,8 @@
     dropzone: document.getElementById("dropzone"),
     fileInput: document.getElementById("file-input"),
     pickFileBtn: document.getElementById("pick-file-btn"),
+    uploadLoading: document.getElementById("upload-loading"),
+    uploadLoadingText: document.getElementById("upload-loading-text"),
     docList: document.getElementById("doc-list"),
     chatThread: document.getElementById("chat-thread"),
     chatForm: document.getElementById("chat-form"),
@@ -45,10 +47,24 @@
     return Number(score).toFixed(2);
   }
 
-  function setUploadBusy(busy) {
+  function setUploadBusy(busy, fileName) {
     uploadBusy = busy;
     els.pickFileBtn.disabled = busy;
     els.fileInput.disabled = busy;
+    els.dropzone.classList.toggle("is-uploading", busy);
+    els.uploadLoading.classList.toggle("is-visible", busy);
+    els.uploadLoading.setAttribute("aria-busy", busy ? "true" : "false");
+
+    if (busy) {
+        els.uploadLoadingText.textContent = fileName
+          ? `업로드 중… ${fileName}`
+          : "업로드 중…";
+      els.pickFileBtn.innerHTML =
+        '<span class="spinner" aria-hidden="true"></span> 업로드 중';
+    } else {
+      els.uploadLoadingText.textContent = "업로드 중…";
+      els.pickFileBtn.textContent = "파일 선택";
+    }
   }
 
   function setChatBusy(busy) {
@@ -164,7 +180,7 @@
     }
 
     hideError();
-    setUploadBusy(true);
+    setUploadBusy(true, file.name);
 
     const form = new FormData();
     form.append("file", file);
@@ -243,6 +259,9 @@
   });
 
   els.dropzone.addEventListener("dragover", (e) => {
+    if (uploadBusy) {
+      return;
+    }
     e.preventDefault();
     els.dropzone.classList.add("is-dragover");
   });
@@ -254,6 +273,9 @@
   els.dropzone.addEventListener("drop", (e) => {
     e.preventDefault();
     els.dropzone.classList.remove("is-dragover");
+    if (uploadBusy) {
+      return;
+    }
     const file = e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) {
       uploadFile(file);
