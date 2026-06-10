@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <h1>RAG Assistant</h1>
+      <p>문서 기반 질의응답 데모</p>
+    </header>
+
+    <div id="error-banner" class="banner banner--error" role="alert" aria-live="polite">
+      <span class="banner__icon" aria-hidden="true">!</span>
+      <span id="error-banner-text" class="banner__text"></span>
+      <button id="error-banner-close" type="button" class="banner__close" aria-label="오류 닫기">&times;</button>
+    </div>
+
+    <main class="layout">
+      <section class="card" aria-labelledby="docs-title">
+        <h2 id="docs-title" class="card__title">문서</h2>
+
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone__icon" aria-hidden="true">⬆</div>
+          <p class="dropzone__title">TXT 또는 Markdown 파일을 업로드</p>
+          <p class="dropzone__hint">최대 1개씩 업로드 · 5MB 이하</p>
+          <button id="pick-file-btn" type="button" class="btn btn--primary">파일 선택</button>
+          <input id="file-input" class="sr-only" type="file" accept=".txt,.md,text/plain,text/markdown">
+        </div>
+
+        <div id="doc-list" class="doc-list" aria-live="polite"></div>
+      </section>
+
+      <section class="card" aria-labelledby="chat-title">
+        <h2 id="chat-title" class="card__title">질문하기</h2>
+
+        <div id="chat-thread" class="chat-thread">
+          <p class="chat-empty">문서를 업로드한 뒤 질문을 입력하세요.</p>
+        </div>
+
+        <div id="chat-loading" class="chat-loading" aria-hidden="true">
+          <span class="spinner spinner--dark" aria-hidden="true"></span>
+          <span>답변 생성 중…</span>
+        </div>
+
+        <form id="chat-form" class="chat-form">
+          <label for="question-input" class="sr-only">질문</label>
+          <input
+            id="question-input"
+            class="chat-form__input"
+            type="text"
+            name="question"
+            placeholder="문서 내용에 대해 질문하세요…"
+            autocomplete="off"
+            maxlength="2000"
+          >
+          <button id="send-btn" type="submit" class="btn btn--primary">전송</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
