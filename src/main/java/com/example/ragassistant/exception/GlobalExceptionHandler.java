@@ -61,4 +61,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("DUPLICATE_DOCUMENT", ex.getMessage()));
     }
+    @ExceptionHandler(DocumentParseException.class)
+    public ResponseEntity<ErrorResponse> handleDocumentParse(DocumentParseException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse("DOCUMENT_PARSE_FAILED", ex.getMessage()));
+    }
 }

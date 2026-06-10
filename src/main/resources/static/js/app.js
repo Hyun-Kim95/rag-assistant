@@ -141,7 +141,7 @@
     els.docList.innerHTML = "";
     if (!documents || documents.length === 0) {
       els.docList.innerHTML =
-        '<p class="doc-list__empty">업로드된 문서가 없습니다. TXT 또는 Markdown 파일을 추가하세요.</p>';
+        '<p class="doc-list__empty">업로드된 문서가 없습니다. TXT, Markdown, PDF 파일을 추가하세요.</p>';
       return;
     }
 

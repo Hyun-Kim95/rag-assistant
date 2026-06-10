@@ -49,7 +49,11 @@ public class DocumentService {
             if (bytes.length == 0) {
                 throw new EmptyFileException();
             }
-            String content = documentParser.parse(bytes);
+            String content = documentParser.parse(filename,bytes);
+            if (content.isEmpty()) {
+                // PDF에서 텍스트 레이어가 없거나, txt/md가 공백만 있는 경우
+                throw new EmptyFileException();
+            }
             Document document = Document.newDocument(
                     filename,
                     file.getContentType(),

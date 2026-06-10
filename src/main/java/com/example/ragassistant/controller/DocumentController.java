@@ -22,7 +22,7 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    @Operation(summary = "문서 업로드", description = "TXT/MD 파일 업로드 후 DB 저장")
+    @Operation(summary = "문서 업로드", description = "TXT / MD / PDF 업로드 후 DB 저장")
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<DocumentResponse> upload(@RequestParam("file") MultipartFile file) {
         DocumentResponse response = documentService.upload(file);
