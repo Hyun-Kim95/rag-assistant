@@ -48,6 +48,7 @@ public class DocumentParserTest {
     void parse_pdf_extractsEmbeddedText() throws IOException {
         byte[] pdf = pdfWithText();
         String text = parser.parse("sample.pdf", pdf);
+        assertThat(text).contains("--- Page 1 ---");
         assertThat(text).contains("RAG Assistant PDF test");
         assertThat(text).contains("pgvector");
     }
@@ -75,6 +76,58 @@ public class DocumentParserTest {
                 cs.showText("RAG Assistant PDF test pgvector"); // ASCII 위주 (Helvetica는 한글 미지원)
                 cs.endText();
             }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            doc.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    // parse(): 2페이지 PDF — extractTextByPage()가 페이지마다 마커·본문을 붙이는지
+    // "--- Page N ---" + 각 페이지 본문 (1페이지 테스트와 구분: 루프·마커 누락 버그 방지)
+    @Test
+    void parse_pdf_multiPage_includesPageMarkers() throws IOException {
+        byte[] pdf = pdfWithTextOnPages("Page-one-content", "Page-two-content");
+        String text = parser.parse("two-pages.pdf", pdf);
+        assertThat(text).contains("--- Page 1 ---");
+        assertThat(text).contains("--- Page 2 ---");
+        assertThat(text).contains("Page-one-content");
+        assertThat(text).contains("Page-two-content");
+    }
+
+    // parse(): 텍스트 레이어 없는 PDF — extractTextByPage()가 빈 결과를 거부하는지
+    // DocumentParseException + OCR 미지원 안내 (EmptyFileException과 구분)
+    @Test
+    void parse_pdf_noTextLayer_throwsDocumentParseException() throws IOException {
+        byte[] pdf = emptyPagePdf();
+        assertThatThrownBy(() -> parser.parse("scan-only.pdf", pdf))
+                .isInstanceOf(DocumentParseException.class)
+                .hasMessageContaining("OCR 미지원");
+    }
+
+    // 페이지마다 다른 문자열을 넣은 다페이지 PDF (lines[i] → i+1페이지)
+    private static byte[] pdfWithTextOnPages(String... lines) throws IOException {
+        try (PDDocument doc = new PDDocument()) {
+            for (String line : lines) {
+                PDPage page = new PDPage();
+                doc.addPage(page);
+                try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+                    cs.newLineAtOffset(50, 700);
+                    cs.showText(line);
+                    cs.endText();
+                }
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            doc.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    // ContentStream 없는 빈 페이지 1장 — PDFBox getText()가 0자인 케이스 (스캔 PDF 근사)
+    private static byte[] emptyPagePdf() throws IOException {
+        try (PDDocument doc = new PDDocument()) {
+            doc.addPage(new PDPage());
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             doc.save(out);
             return out.toByteArray();

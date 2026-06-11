@@ -5,12 +5,19 @@
 
 ## 목적
 
-- 외부 LLM API 없이 로컬에서 문서 Q&A
-- RAG 파이프라인(업로드 → 검색 → 생성 → 출처) 학습 및 포트폴리오
+- 외부 LLM API 없이 로컬에서 RAG 파이프라인 학습·실험
+- 업로드 → chunking → embedding → 검색 → 생성 → 출처 표시
 
 ## 기술 스택
 
 Java 17 · Spring Boot · Ollama · PostgreSQL(pgvector) · Gradle
+
+## 접속
+| 용도 | URL |
+| --- | --- |
+| UI | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| Health | http://localhost:8080/api/health |
 
 ## License
 

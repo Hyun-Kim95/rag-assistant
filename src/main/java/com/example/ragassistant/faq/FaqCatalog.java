@@ -41,7 +41,7 @@ public final class FaqCatalog {
                 // chunk·retrieval 설정
                 """
                         [설정] RAG chunk 및 retrieval 파라미터
-                        chunk-size: 450, chunk-overlap: 150, top-k: 7, min-score: 0.2.
+                        chunk-size: 450, chunk-overlap: 150, top-k: 10, min-score: 0.2.
                         embedding dimension: 768. 설정 파일: application.yml의 rag 섹션.
                         """.stripIndent().trim()
         );

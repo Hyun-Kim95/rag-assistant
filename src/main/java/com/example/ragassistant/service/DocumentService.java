@@ -52,8 +52,8 @@ public class DocumentService {
                 throw new EmptyFileException();
             }
             String content = documentParser.parse(filename,bytes);
-            if (content.isEmpty()) {
-                // PDF에서 텍스트 레이어가 없거나, txt/md가 공백만 있는 경우
+            if (content.isBlank()) {
+                // txt/md가 공백만 있는 경우 (PDF 빈 텍스트는 parser에서 이미 거부)
                 throw new EmptyFileException();
             }
             Document document = Document.newDocument(

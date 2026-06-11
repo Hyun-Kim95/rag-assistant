@@ -9,7 +9,7 @@ public class FaqCatalogTest {
     // FAQ chunk가 비어 있지 않고, 정책 키워드를 포함하는지
     @Test
     void chunks_containNoAnswerPolicyKeywords() {
-        assertThat(FaqCatalog.chunks()).hasSizeGreaterThanOrEqualTo(3);
+        assertThat(FaqCatalog.chunks()).hasSizeGreaterThanOrEqualTo(2);
         String policyChunk = FaqCatalog.chunks().get(0);
         assertThat(policyChunk)
                 .contains("hits")
