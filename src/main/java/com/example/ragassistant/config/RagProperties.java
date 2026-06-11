@@ -8,6 +8,11 @@ public record RagProperties(
         int chunkOverlap,
         int topK,
         double minScore,
-        int embeddingDimension
+        int embeddingDimension,
+        // --- hybrid ---
+        boolean hybridEnabled,
+        int lexicalTopK,
+        double lexicalMinScore,
+        int rrfK
 ) {
 }

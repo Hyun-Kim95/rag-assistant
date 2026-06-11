@@ -3,8 +3,10 @@ package com.example.ragassistant.domain;
 import lombok.Getter;
 
 /**
- * pgvector 유사도 검색 결과 1건.
- * document_chunks + document_embeddings JOIN 결과.
+ * 검색 결과 1건 (chunk + 유사도 score).
+ * vector-only: score = cosine similarity (1에 가까울수록 유사).
+ * hybrid: 정렬은 RRF, score 필드는 출처 표시용으로
+ * vector score 우선·없으면 lexical similarity.
  */
 @Getter
 public class SearchHit {

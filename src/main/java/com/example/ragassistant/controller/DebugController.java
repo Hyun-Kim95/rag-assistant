@@ -7,6 +7,7 @@ import com.example.ragassistant.service.OllamaService;
 import java.util.List;
 import java.util.Map;
 
+import com.example.ragassistant.service.Retriever;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +21,12 @@ public class DebugController {
 
     private final OllamaService ollamaService;
     private final ChunkService chunkService;
+    private final Retriever retriever;
 
-    public DebugController(OllamaService ollamaService, ChunkService chunkService) {
+    public DebugController(OllamaService ollamaService, ChunkService chunkService, Retriever retriever) {
         this.ollamaService = ollamaService;
         this.chunkService = chunkService;
+        this.retriever = retriever;
     }
 
     @GetMapping("/ollama/chat")
@@ -49,6 +52,16 @@ public class DebugController {
                 "documentId", id,
                 "chunkCount", chunks.size(),
                 "chunks", chunks
+        );
+    }
+
+    // local 비교 API
+    @GetMapping("/retrieval/compare")
+    public Map<String, Object> compareRetrieval(@RequestParam String q) {
+        return Map.of(
+                "question", q,
+                "vectorOnly", retriever.retrieveVectorOnlyForDebug(q),
+                "hybrid", retriever.retrieveHybridForDebug(q)
         );
     }
 }
