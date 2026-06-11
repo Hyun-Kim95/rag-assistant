@@ -2,9 +2,12 @@ package com.example.ragassistant.service;
 
 import com.example.ragassistant.domain.SearchHit;
 import com.example.ragassistant.dto.ChatResponse;
+import com.example.ragassistant.dto.ChatStreamEvent;
 import com.example.ragassistant.dto.SourceCitation;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -19,11 +22,13 @@ public class RagService {
     private final Retriever retriever;
     private final PromptBuilder promptBuilder;
     private final OllamaService ollamaService;
+    private final ObjectMapper objectMapper;
 
-    public RagService(Retriever retriever, PromptBuilder promptBuilder, OllamaService ollamaService) {
+    public RagService(Retriever retriever, PromptBuilder promptBuilder, OllamaService ollamaService, ObjectMapper objectMapper) {
         this.retriever = retriever;
         this.promptBuilder = promptBuilder;
         this.ollamaService = ollamaService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -68,5 +73,47 @@ public class RagService {
             return normalized.length() <= NO_ANSWER_MESSAGE.length() + 40;
         }
         return false;
+    }
+
+    /**
+     * RAG 스트리밍: retrieve(동기) → LLM stream → SSE done.
+     * 호출 스레드에서 blocking — Controller가 별도 스레드에서 실행할 것.
+     */
+    public void chatStream(String question, SseEmitter emitter) {
+        if (!StringUtils.hasText(question)) {
+            throw new IllegalArgumentException("질문이 비어 있습니다.");
+        }
+        try {
+            List<SearchHit> hits = retriever.retrieve(question.trim());
+            if (hits.isEmpty()) {
+                sendDone(emitter, ChatResponse.noAnswer(NO_ANSWER_MESSAGE));
+                emitter.complete();
+                return;
+            }
+            String prompt = promptBuilder.build(hits, question);
+            String fullAnswer = ollamaService.streamChat(prompt, piece ->
+                    sendEvent(emitter, "delta", ChatStreamEvent.delta(piece))
+            );
+            boolean grounded = !isNoAnswer(fullAnswer);
+            ChatResponse response = grounded
+                    ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true)
+                    : ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
+            sendDone(emitter, response);
+            emitter.complete();
+        } catch (Exception ex) {
+            emitter.completeWithError(ex);
+        }
+    }
+    private void sendEvent(SseEmitter emitter, String eventName, ChatStreamEvent payload) {
+        try {
+            emitter.send(SseEmitter.event()
+                    .name(eventName)
+                    .data(objectMapper.writeValueAsString(payload)));
+        } catch (Exception ex) {
+            throw new RuntimeException("SSE 전송 실패", ex);
+        }
+    }
+    private void sendDone(SseEmitter emitter, ChatResponse response) {
+        sendEvent(emitter, "done", ChatStreamEvent.done(response));
     }
 }

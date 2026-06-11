@@ -1,11 +1,18 @@
 package com.example.ragassistant.service;
 
 import com.example.ragassistant.config.OllamaProperties;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.example.ragassistant.exception.OllamaResponseException;
 import com.example.ragassistant.exception.OllamaUnavailableException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
@@ -16,10 +23,12 @@ public class OllamaService {
 
     private final RestClient ollamaRestClient;
     private final OllamaProperties properties;
+    private final ObjectMapper objectMapper;
 
-    public OllamaService(RestClient ollamaRestClient, OllamaProperties properties) {
+    public OllamaService(RestClient ollamaRestClient, OllamaProperties properties, ObjectMapper objectMapper) {
         this.ollamaRestClient = ollamaRestClient;
         this.properties = properties;
+        this.objectMapper = objectMapper;
     }
 
     public String chat(String prompt) {
@@ -97,6 +106,72 @@ public class OllamaService {
                     "Ollama HTTP 오류: " + ex.getStatusCode().value() + " uri=" + uri,
                     ex
             );
+        }
+    }
+
+    private Map<String, Object> buildChatRequest(String prompt, boolean stream) {
+        return Map.of(
+                "model", properties.chatModel(),
+                "messages", List.of(
+                        Map.of("role", "system", "content",
+                                "당신은 한국어로만 답하는 문서 Q&A 어시스턴트입니다. "
+                                        + "중국어와 영어로 답하지 마세요."),
+                        Map.of("role", "user", "content", prompt)),
+                "stream", stream,
+                "options", Map.of("temperature", properties.temperature())
+        );
+    }
+
+    /**
+     * Ollama /api/chat stream=true — NDJSON 한 줄씩 파싱.
+     *
+     * @param onDelta 토큰(또는 content 조각)마다 호출
+     * @return 전체 assistant 답변 (isNoAnswer 판별용)
+     */
+    public String streamChat(String prompt, Consumer<String> onDelta) {
+        Map<String, Object> request = buildChatRequest(prompt, true);
+
+        try {
+            return ollamaRestClient.post()
+                    .uri("/api/chat")
+                    .body(request)
+                    .exchange((req, response) -> {
+                        if (response.getStatusCode().isError()) {
+                            throw new OllamaResponseException(
+                                    "Ollama HTTP 오류: " + response.getStatusCode().value() + " uri=/api/chat");
+                        }
+                        StringBuilder full = new StringBuilder();
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.isBlank()) {
+                                    continue;
+                                }
+                                JsonNode root = objectMapper.readTree(line);
+                                JsonNode contentNode = root.path("message").path("content");
+                                if (contentNode.isMissingNode() || contentNode.isNull()) {
+                                    continue;
+                                }
+                                String piece = contentNode.asText();
+                                if (piece.isEmpty()) {
+                                    continue;
+                                }
+                                full.append(piece);
+                                onDelta.accept(piece);
+                            }
+                        }
+                        return full.toString();
+                    });
+        } catch (ResourceAccessException ex) {
+            throw new OllamaUnavailableException(
+                    "Ollama에 연결할 수 없습니다. Docker/서비스 실행 및 base-url("
+                            + properties.baseUrl() + ")을 확인하세요.",
+                    ex);
+        } catch (OllamaResponseException | OllamaUnavailableException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new OllamaResponseException("Ollama stream 처리 중 오류", ex);
         }
     }
 }
