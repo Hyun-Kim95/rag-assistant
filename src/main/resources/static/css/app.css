@@ -310,8 +310,71 @@ body {
   color: var(--warn-text);
 }
 
+.message__bubble--streaming::after {
+  content: "▋";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--primary);
+  animation: blink-cursor 1s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+.sources__title--standalone {
+  margin-top: 12px;
+}
+
 .sources {
   margin-top: 12px;
+}
+
+.sources-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f9fafb;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sources-toggle:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.sources-toggle__chevron {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  color: var(--primary);
+  transition: transform 0.15s;
+}
+
+.sources--expanded .sources-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+.sources-panel {
+  margin-top: 8px;
+}
+
+/* 기본 접힘: hidden 속성 + 클래스 이중 적용 */
+.sources.sources--collapsed .sources-panel,
+.sources-panel[hidden] {
+  display: none;
 }
 
 .sources__title {

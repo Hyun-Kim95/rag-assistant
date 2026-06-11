@@ -21,6 +21,9 @@
   let chatBusy = false;
   let uploadBusy = false;
 
+  /** 하단 고정 판정 여유(px) — 이보다 위면 사용자가 스크롤 올린 것으로 간주 */
+  const SCROLL_PIN_THRESHOLD = 48;
+
   function showError(message) {
     els.bannerText.textContent = message;
     els.banner.classList.add("is-visible");
@@ -86,6 +89,17 @@
     }
   }
 
+  function isChatPinnedToBottom() {
+    const el = els.chatThread;
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_PIN_THRESHOLD;
+  }
+
+  function scrollChatToBottom(force) {
+    if (force || isChatPinnedToBottom()) {
+      els.chatThread.scrollTop = els.chatThread.scrollHeight;
+    }
+  }
+
   function appendUserMessage(text) {
     clearChatEmpty();
     const wrap = document.createElement("div");
@@ -94,39 +108,111 @@
       '<p class="message__label">질문</p>' +
       `<div class="message__bubble">${escapeHtml(text)}</div>`;
     els.chatThread.appendChild(wrap);
-    els.chatThread.scrollTop = els.chatThread.scrollHeight;
+    scrollChatToBottom(true);
   }
 
-  function appendAssistantMessage(answer, grounded, sources) {
+  /** 스트리밍용: 빈 assistant 말풍선 + 출처 자리만 먼저 만든다 */
+  function appendAssistantShell() {
+    clearChatEmpty();
     const wrap = document.createElement("div");
-    wrap.className =
-      "message message--assistant" + (grounded ? "" : " message--no-answer");
-
-    let html =
+    wrap.className = "message message--assistant";
+    wrap.innerHTML =
       '<p class="message__label">답변</p>' +
-      `<div class="message__bubble">${escapeHtml(answer)}</div>`;
-
-    if (grounded && sources && sources.length > 0) {
-      html += '<div class="sources"><p class="sources__title">출처</p>';
-      for (const src of sources) {
-        html +=
-          '<article class="source-card">' +
-          '<div class="source-card__head">' +
-          `<span class="source-card__name">${escapeHtml(src.documentName)}</span>` +
-          `<span class="source-card__score">Score: ${formatScore(src.score)}</span>` +
-          "</div>" +
-          `<p class="source-card__snippet">${escapeHtml(src.snippet || "")}</p>` +
-          "</article>";
-      }
-      html += "</div>";
-    } else if (!grounded) {
-      html +=
-        '<p class="sources__title" style="margin-top:12px">관련 출처 없음</p>';
-    }
-
-    wrap.innerHTML = html;
+      '<div class="message__bubble message__bubble--streaming"></div>' +
+      '<div class="sources-host"></div>';
     els.chatThread.appendChild(wrap);
-    els.chatThread.scrollTop = els.chatThread.scrollHeight;
+    scrollChatToBottom(true);
+    return {
+      wrap,
+      bubble: wrap.querySelector(".message__bubble"),
+      sourcesHost: wrap.querySelector(".sources-host"),
+    };
+  }
+
+  function buildSourceCardsHtml(sources) {
+    let html = "";
+    for (const src of sources) {
+      html +=
+        '<article class="source-card">' +
+        '<div class="source-card__head">' +
+        `<span class="source-card__name">${escapeHtml(src.documentName)}</span>` +
+        `<span class="source-card__score">Score: ${formatScore(src.score)}</span>` +
+        "</div>" +
+        `<p class="source-card__snippet">${escapeHtml(src.snippet || "")}</p>` +
+        "</article>";
+    }
+    return html;
+  }
+
+  /** 출처: 기본 접힘 — done 후 레이아웃 점프 완화 */
+  function renderSourcesInto(host, grounded, sources) {
+    host.innerHTML = "";
+    const message = host.closest(".message");
+    if (grounded && sources && sources.length > 0) {
+      const count = sources.length;
+      host.innerHTML =
+        '<div class="sources sources--collapsed">' +
+        '<button type="button" class="sources-toggle" aria-expanded="false">' +
+        `<span class="sources-toggle__label">출처 ${count}건</span>` +
+        '<span class="sources-toggle__chevron" aria-hidden="true">▼</span>' +
+        "</button>" +
+        '<div class="sources-panel" hidden>' +
+        buildSourceCardsHtml(sources) +
+        "</div></div>";
+      const panel = host.querySelector(".sources-panel");
+      if (panel) {
+        panel.hidden = true;
+      }
+      message.classList.remove("message--no-answer");
+    } else if (!grounded) {
+      host.innerHTML =
+        '<p class="sources__title sources__title--standalone">관련 출처 없음</p>';
+      message.classList.add("message--no-answer");
+    }
+  }
+
+  function toggleSourcesPanel(toggleBtn) {
+    const sources = toggleBtn.closest(".sources");
+    const panel = sources.querySelector(".sources-panel");
+    const expanded = !sources.classList.contains("sources--expanded");
+    sources.classList.toggle("sources--expanded", expanded);
+    sources.classList.toggle("sources--collapsed", !expanded);
+    toggleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    panel.hidden = !expanded;
+    if (expanded && isChatPinnedToBottom()) {
+      scrollChatToBottom(true);
+    }
+  }
+
+  /**
+   * SSE(text/event-stream) 버퍼 파싱 — 이벤트 블록은 빈 줄(\n\n)로 구분
+   * @returns 남은 미완성 버퍼
+   */
+  function parseSseChunk(buffer, onEvent) {
+    const parts = buffer.split("\n\n");
+    const rest = parts.pop() || "";
+    for (const block of parts) {
+      if (!block.trim()) {
+        continue;
+      }
+      let eventName = "message";
+      let dataLine = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataLine += line.slice(5).trim();
+        }
+      }
+      if (dataLine) {
+        try {
+          onEvent(eventName, JSON.parse(dataLine));
+        } catch {
+          /* 잘못된 JSON 블록 무시 */
+        }
+      }
+    }
+    return rest;
   }
 
   function escapeHtml(str) {
@@ -227,19 +313,53 @@
     appendUserMessage(question);
     els.questionInput.value = "";
 
+    const shell = appendAssistantShell();
+    els.chatLoading.classList.remove("is-visible");
+    let buffer = "";
+    let streamStarted = false;
+
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
+
       if (!res.ok) {
+        shell.wrap.remove();
         showError(await parseError(res));
         return;
       }
-      const data = await res.json();
-      appendAssistantMessage(data.answer, data.grounded, data.sources);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        buffer = parseSseChunk(buffer, (eventName, data) => {
+          if (eventName === "delta" && data.text) {
+            if (!streamStarted) {
+              streamStarted = true;
+              shell.bubble.classList.add("message__bubble--streaming");
+            }
+            shell.bubble.textContent += data.text;
+            scrollChatToBottom(false);
+          }
+          if (eventName === "done") {
+            shell.bubble.classList.remove("message__bubble--streaming");
+            if (data.answer != null) {
+              shell.bubble.textContent = data.answer;
+            }
+            renderSourcesInto(shell.sourcesHost, data.grounded, data.sources);
+          }
+        });
+      }
     } catch {
+      shell.wrap.remove();
       showError("질문 전송에 실패했습니다.");
     } finally {
       setChatBusy(false);
@@ -291,6 +411,13 @@
     const id = item && item.dataset.id;
     if (id) {
       deleteDocument(id);
+    }
+  });
+
+  els.chatThread.addEventListener("click", (e) => {
+    const toggle = e.target.closest(".sources-toggle");
+    if (toggle) {
+      toggleSourcesPanel(toggle);
     }
   });
 
