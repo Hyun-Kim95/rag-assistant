@@ -36,7 +36,7 @@ rag:
   min-score: 0.2
   embedding-dimension: 768
   # --- hybrid search ---
-  hybrid-enabled: true     # 기본 off: 기존 vector-only와 동일
+  hybrid-enabled: false    # true 시 pg_trgm + RRF hybrid (vector-only 회귀와 다름)
   lexical-top-k: 10         # lexical leg 후보 수 (보통 vector top-k와 동일)
   lexical-min-score: 0.1    # pg_trgm similarity 하한 (0~1)
   rrf-k: 60                 # RRF 상수, 논문/Elasticsearch 관례값
