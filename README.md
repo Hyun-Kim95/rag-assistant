@@ -8,11 +8,6 @@ Ollama와 PostgreSQL pgvector로 문서를 검색해 답하는 Spring Boot RAG �
 
 설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
-## Demo
-
-문서 업로드 후 RAG 질의·출처·no-answer 동작을 보여주는 화면 녹화 (~45초).
-https://github.com/Hyun-Kim95/rag-assistant/assets/1fe22580-16c4-42b2-b2d3-990971f1a1db
-
 ## 실행
 
 **필요:** JDK 17, Ollama (`http://localhost:11434`), PostgreSQL + pgvector
