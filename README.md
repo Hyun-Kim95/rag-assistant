@@ -3,7 +3,7 @@
 Ollama와 PostgreSQL pgvector로 문서를 검색해 답하는 Spring Boot RAG 데모입니다.  
 문서를 업로드하면 chunk → embedding → 검색 → 생성 순으로 처리하고, 답변과 함께 출처(sources)·`grounded` 여부를 반환합니다.
 
-**스택:** Java 17, Spring Boot, Ollama (`qwen2.5:7b`, `nomic-embed-text`), PostgreSQL + pgvector  
+**스택:** Java 17, Spring Boot, Gradle, Ollama (`qwen2.5:7b`, `nomic-embed-text`), PostgreSQL + pgvector 
 (선택) hybrid 검색: `pg_trgm` + RRF — `rag.hybrid-enabled` 기본 `false`
 
 설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)

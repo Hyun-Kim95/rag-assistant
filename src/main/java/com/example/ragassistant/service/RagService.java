@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static com.example.ragassistant.service.PromptBuilder.NO_ANSWER_MESSAGE;
 
@@ -18,6 +19,11 @@ import static com.example.ragassistant.service.PromptBuilder.NO_ANSWER_MESSAGE;
  */
 @Service
 public class RagService {
+
+    /** PromptBuilder [Context]/[Question]/[Answer] 라벨·Context 메타 줄 (답변 끝 잔여물) */
+    private static final Pattern TRAILING_PROMPT_META_LINE = Pattern.compile(
+            "(?i)^\\s*(\\[(?:Context|Question|Answer)]"
+                    + "|Context에서|Context에|Context만).*$");
 
     private final Retriever retriever;
     private final PromptBuilder promptBuilder;
@@ -45,8 +51,8 @@ public class RagService {
             return ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
         }
         String prompt = promptBuilder.build(hits, question);
-        String answer = ollamaService.chat(prompt);
-        boolean grounded = !isNoAnswer(answer);
+        String answer = sanitizeLlmAnswer(ollamaService.chat(prompt));
+        boolean grounded = isGrounded(answer);
 
         List<SourceCitation> sources = grounded
                 ? hits.stream().map(SourceCitation::from).toList()
@@ -56,23 +62,55 @@ public class RagService {
     }
 
     /**
-     * LLM이 no-answer 패턴으로 답했는지 판별.
+     * LLM이 프롬프트의 no-answer 규칙을 오해해 붙이는 잔여 태그 제거.
+     */
+    private String sanitizeLlmAnswer(String answer) {
+        if (!StringUtils.hasText(answer)) {
+            return answer;
+        }
+        String normalized = answer.strip()
+                .replaceAll("(?i)\\[no-answer]\\s*$", "")
+                .strip();
+        String stripped = stripTrailingPromptMetaLines(normalized);
+        return stripLeadingAnswerLabel(stripped);
+    }
+
+    /** LLM이 붙이는 프롬프트 라벨·Context 메타 요약 등 마지막 줄 제거 */
+    private String stripTrailingPromptMetaLines(String answer) {
+        String result = answer;
+        while (StringUtils.hasText(result)) {
+            int lastNewline = result.lastIndexOf('\n');
+            String lastLine = lastNewline >= 0 ? result.substring(lastNewline + 1) : result;
+            if (!TRAILING_PROMPT_META_LINE.matcher(lastLine).matches()) {
+                break;
+            }
+            result = lastNewline >= 0 ? result.substring(0, lastNewline).strip() : "";
+        }
+        return result;
+    }
+
+    /** LLM이 답 앞에 붙이는 [Answer] 라벨 제거 */
+    private String stripLeadingAnswerLabel(String answer) {
+        return answer.replaceFirst("(?is)^\\s*\\[Answer]\\s*", "").strip();
+    }
+
+    /**
+     * LLM 답변이 context 기반(grounded)인지 판별.
      * prompt 문구 변경 시 NO_ANSWER_MESSAGE와 함께 유지할 것.
      */
-    private boolean isNoAnswer(String answer) {
+    private boolean isGrounded(String answer) {
         if (!StringUtils.hasText(answer)) {
-            return true;
+            return false;
         }
         String normalized = answer.strip();
-        // 정확히 no-answer 문구만
         if (normalized.equals(NO_ANSWER_MESSAGE)) {
-            return true;
+            return false;
         }
-        // no-answer로 시작 + 부연 (중국어 괄호 등)
+        // no-answer로 시작 + 짧은 부연(중국어 괄호 등)만 no-answer로 간주
         if (normalized.startsWith(NO_ANSWER_MESSAGE)) {
-            return normalized.length() <= NO_ANSWER_MESSAGE.length() + 40;
+            return normalized.length() > NO_ANSWER_MESSAGE.length() + 40;
         }
-        return false;
+        return true;
     }
 
     /**
@@ -91,10 +129,10 @@ public class RagService {
                 return;
             }
             String prompt = promptBuilder.build(hits, question);
-            String fullAnswer = ollamaService.streamChat(prompt, piece ->
+            String fullAnswer = sanitizeLlmAnswer(ollamaService.streamChat(prompt, piece ->
                     sendEvent(emitter, "delta", ChatStreamEvent.delta(piece))
-            );
-            boolean grounded = !isNoAnswer(fullAnswer);
+            ));
+            boolean grounded = isGrounded(fullAnswer);
             ChatResponse response = grounded
                     ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true)
                     : ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
