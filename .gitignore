@@ -64,4 +64,6 @@ uploads/
 data/
 
 ### Project docs (local only) ###
-docs/
+docs/IMPLEMENTATION_PLAN.md
+docs/PRE_COMMIT_CHECKLIST.md
+docs/design/
