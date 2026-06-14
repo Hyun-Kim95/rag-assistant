@@ -30,13 +30,15 @@ public final class FaqCatalog {
                 // hits empty / no-answer 정책
                 """
                         [정책] 검색 hit가 없을 때 앱 동작
-                        Retriever는 질문을 embedding한 뒤 pgvector cosine top-k 검색을 하고, \
-                        min-score(0.2) 이상인 chunk만 hits로 남긴다.
-                        hits가 비어 있으면(retrieval miss, 검색 결과 없음, min-score 미달) \
-                        RagService.chat()은 Ollama LLM을 호출하지 않는다.
-                        즉시 no-answer를 반환한다: grounded=false, sources=[], \
-                        메시지「문서에서 확인할 수 없는 질문입니다.」
-                        이는 환각 방지와 비용 절감을 위한 정책이다.
+                        질문을 embedding한 뒤 pgvector cosine top-k 검색을 하고,
+                        min-score(0.2) 이상인 chunk만 검색 결과(hits)로 남긴다.
+                        검색 결과가 비어 있으면(retrieval miss, min-score 미달) RagService는 Ollama LLM을 호출하지 않는다.
+                        즉시 다음 응답을 반환한다.
+                        - answer: 「문서에서 확인할 수 없는 질문입니다.」
+                        - grounded: false
+                        - sources: 빈 목록 []
+                        환각 방지와 비용 절감을 위한 정책이다.
+                        동의어: 검색 결과 없음, retrieval miss, hits empty, hit 없을 때.
                         """.stripIndent().trim(),
                 // chunk·retrieval 설정
                 """

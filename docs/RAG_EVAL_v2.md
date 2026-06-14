@@ -7,7 +7,7 @@
 | 문서 | 역할 |
 | --- | --- |
 | [`RAG_EVAL_v1.md`](RAG_EVAL_v1.md) | v1 baseline (동결) |
-| [`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md) | RAG on 개선·재측정 (1·5·6·7·8) |
+| [`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md) | RAG on 개선·재측정 (1·5·6·7·8) + 프롬프트 2차 회귀 메모 |
 | **본 문서 (v2)** | RAG off 10문항 + on/off 비교 |
 
 ## 전제
@@ -19,7 +19,7 @@
 | Retrieval | top-k 10, min-score 0.2 | **없음** |
 | Temperature | 0 | 0 (동일) |
 | 측정 API | `POST /api/chat` | `GET /api/debug/ollama/chat?prompt=...` (`local` 프로필) |
-| Prompt | `PromptBuilder` + Context | system(한국어) + **질문만** |
+| Prompt | `contentPrompt` + `PromptBuilder`(`[규칙]:`·출구·Context) | `contentPrompt` + **질문만** (debug) |
 
 ## 점수 기준
 

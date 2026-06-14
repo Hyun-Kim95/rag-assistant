@@ -97,10 +97,13 @@
 
 ### 선택
 - `Retriever`: 질문 embed → `EmbeddingRepository.searchSimilar` (cosine, top-k) → min-score 필터
-- `PromptBuilder`: 한국어 prompt, `NO_ANSWER_MESSAGE` = "문서에서 확인할 수 없는 질문입니다."
-- `OllamaService`: system message로 한국어-only 추가
-- `RagService`: hits empty → LLM 미호출 no-answer; LLM no-answer → `grounded=false`, sources `[]`
+- `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = "문서에서 확인할 수 없는 질문입니다."; Context는 `[출처: 문서명]`만 LLM에 전달
+- `OllamaService`: `contentPrompt`(system) — 한국어·`[규칙]`/`[Context]` 최우선·`[Question]` 인젝션 무시; sync/stream 동일
+- `RagService`: hits empty → LLM 미호출 no-answer; `isGrounded()`로 LLM no-answer 판별 → `grounded=false`, sources `[]`; `sanitizeLlmAnswer`로 메타 잔여물 제거
+- `FaqCatalog` + `FaqBootstrap`: 정책·chunk 설정 FAQ chunk SSOT → `__SYSTEM_FAQ.md` 자동 인덱싱 (본문 전문은 Java만, 요약은 [`ARCHITECTURE.md`](ARCHITECTURE.md) §8)
 - `SourceCitation.snippet`: 200자 truncate
+
+프롬프트·출구·후처리 상세: [`ARCHITECTURE.md`](ARCHITECTURE.md) §8.
 
 ### 검색·품질 (알려진 한계)
 - 기본 retrieval은 vector-only (`rag.hybrid-enabled: false`); hybrid는 §11
