@@ -58,6 +58,7 @@
 - 검색 miss 시 no-answer(LLM 미호출), 답변 시 출처 snippet + `grounded`
 - (선택) hybrid — `pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `false`
 - 브라우저 UI (`static/`), Swagger, `local` 프로필 debug API
+- RAG 평가 자동화: `eval/questions.json` 고정 세트 → `RagEvalRunner`(CLI 플래그) → `eval/reports/` JSON·MD (§11)
 - RAG 품질 기록: [`RAG_EVAL_v1.md`](RAG_EVAL_v1.md) · [`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md) · [`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)
 - 아직 없음: repo migration SQL, PDF OCR, reranker, 운영 배포
 
@@ -102,6 +103,14 @@ com.example.ragassistant
 │   └── EmbeddingRepository
 ├── search
 │   └── RrfFusion
+├── eval
+│   ├── RagEvalRunner       (ApplicationRunner, --rag.eval.enabled)
+│   ├── EvalMode            (RAG_ON | RAG_OFF)
+│   ├── EvalQuestion        (questions.json 1문항)
+│   ├── EvalQuestionSet     (questions.json 로더)
+│   ├── EvalScorer          (룰 기반 채점)
+│   ├── EvalResult / EvalReport
+│   └── EvalReportWriter    (eval/reports/ JSON·MD)
 ├── service
 │   ├── OllamaService
 │   ├── DocumentService
@@ -335,3 +344,46 @@ sync(`/api/chat`)·stream(`/api/chat/stream`) 모두 동일 system.
 | Ollama (Docker) | chat + embedding | 기존 인스턴스 공유 |
 | PostgreSQL | metadata + vector | pgvector extension 필요 |
 | Browser/UI | upload + chat | `static/index.html` |
+
+## 11. RAG 평가 자동화
+
+고정 질문 세트로 RAG 품질을 반복 측정한다. REST가 아니라 `RagService`/`OllamaService`를 **직접 호출**해 직렬화·네트워크 변수를 제거한다 (설계 이유는 [`DECISIONS.md`](DECISIONS.md) §13).
+
+### 실행
+
+```bash
+gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
+gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_OFF"
+```
+
+- `--rag.eval.enabled` 없으면 `RagEvalRunner`는 즉시 return (일반 bootRun·UI에 영향 없음)
+- `--rag.eval.mode` 기본값 `RAG_ON`; `--rag.eval.questions`로 질문 파일 경로 override (기본 `eval/questions.json`)
+- `@Order(100)` — `FaqBootstrap`(FAQ·코퍼스 인덱싱) 이후 실행
+
+### 모드
+
+| 모드 | 경로 | 비고 |
+|---|---|---|
+| `RAG_ON` | `RagService.chat` (검색 → no-answer/prompt → LLM) | 프로덕션 경로 |
+| `RAG_OFF` | `OllamaService.chat` (검색·Context 없음) | v2 대조군(ablation), `grounded=false`·`sources=[]` 고정 |
+
+### 채점 (`EvalScorer`)
+
+LLM-as-judge 없이 **결정적 룰**로 0/1/2점. 문항 정의(`eval/questions.json`)의 필드만 본다.
+
+| 필드 | 의미 |
+|---|---|
+| `expectNoAnswer` | 문서 밖 질문 — `grounded=false`·`sources=[]`·no-answer 문구여야 만점 |
+| `mustGrounded` / `minSourceCount` | 사실·정책 문항의 grounded·출처 하한 |
+| `mustContainAll` / `mustContainAny` | 기대 키워드 (전부 / 일부) |
+| `mustNotContain` | 금지·환각 키워드 (위반 시 0점, `failReasons` 기록) |
+
+### 산출물 (`eval/reports/`)
+
+| 파일 | Git | 용도 |
+|---|---|---|
+| `latest-rag-on.{json,md}`, `latest-rag-off.{json,md}` | 커밋 | 모드별 최신 결과 |
+| `compare-latest.md` | 커밋 | on/off 점수·Δ 비교 (둘 다 실행 시 갱신) |
+| `runs/{timestamp}_{MODE}.{json,md}` | gitignore | 실행 이력 (로컬 튜닝용) |
+
+질문 세트(`eval/questions.json`)가 SSOT다. 최신 자동 실행 결과·해석은 [`RAG_EVAL_v2.md`](RAG_EVAL_v2.md).

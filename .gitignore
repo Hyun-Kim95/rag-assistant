@@ -68,3 +68,6 @@ docs/IMPLEMENTATION_PLAN.md
 docs/PRE_COMMIT_CHECKLIST.md
 docs/design/
 docs/portfolio/
+
+### RAG eval ###
+eval/reports/runs/

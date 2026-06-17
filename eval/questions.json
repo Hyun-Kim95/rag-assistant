@@ -1,0 +1,117 @@
+{
+  "version": "v2",
+  "description": "RAG on/off 비교용 고정 10문항 (docs/RAG_EVAL_v2.md 동일)",
+  "questions": [
+    {
+      "id": 1,
+      "category": "A_FACT",
+      "question": "이 프로젝트의 기술 스택은?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": ["Java 17", "Spring Boot", "Ollama", "PostgreSQL", "pgvector", "Gradle"],
+      "mustContainAll": [],
+      "mustNotContain": ["React", "Node.js", "MySQL"]
+    },
+    {
+      "id": 2,
+      "category": "A_FACT",
+      "question": "Ollama base-url은?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": [],
+      "mustContainAll": ["http://localhost:11434"],
+      "mustNotContain": []
+    },
+    {
+      "id": 3,
+      "category": "A_FACT",
+      "question": "chat / embedding model 이름은?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAll": ["qwen2.5:7b", "nomic-embed-text"],
+      "mustContainAny": [],
+      "mustNotContain": ["ChatGPT", "Claude", "BERT"]
+    },
+    {
+      "id": 4,
+      "category": "A_FACT",
+      "question": "pgvector 대신 Chroma를 쓰지 않은 이유?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": ["PostgreSQL", "단일", "메타"],
+      "mustNotContain": ["Chroma가 더 좋", "Chroma를 쓰는 이유"]
+    },
+    {
+      "id": 5,
+      "category": "B_POLICY",
+      "question": "Spring AI를 전면 도입하지 않은 이유?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": ["Spring AI", "학습", "제어", "의존"],
+      "mustNotContain": []
+    },
+    {
+      "id": 6,
+      "category": "B_POLICY",
+      "question": "검색 hit가 없을 때 앱은 어떻게 동작하나?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": ["LLM", "호출", "no-answer", "grounded", "sources"],
+      "mustNotContain": ["알림", "추천 검색어"]
+    },
+    {
+      "id": 7,
+      "category": "B_POLICY",
+      "question": "chunk-size와 chunk-overlap은?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAll": ["450", "150"],
+      "mustNotContain": []
+    },
+    {
+      "id": 8,
+      "category": "C_NO_ANSWER",
+      "question": "이 프로젝트의 2025년 매출은?",
+      "maxScore": 2,
+      "expectNoAnswer": true,
+      "mustGrounded": false,
+      "maxSourceCount": 0,
+      "mustContainAll": [],
+      "mustNotContain": []
+    },
+    {
+      "id": 9,
+      "category": "C_NO_ANSWER",
+      "question": "Kubernetes로 배포했나?",
+      "maxScore": 2,
+      "expectNoAnswer": true,
+      "mustGrounded": false,
+      "maxSourceCount": 0,
+      "mustNotContain": ["배포했", "사용 중"]
+    },
+    {
+      "id": 10,
+      "category": "C_NO_ANSWER",
+      "question": "fine-tuning을 했나?",
+      "maxScore": 2,
+      "expectNoAnswer": true,
+      "mustGrounded": false,
+      "maxSourceCount": 0,
+      "mustNotContain": ["fine-tuning을 거쳤", "파인튜닝을 했"]
+    }
+  ]
+}

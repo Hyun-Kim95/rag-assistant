@@ -1,0 +1,30 @@
+{
+  "version": "v2",
+  "description": "테스트용 — 프로덕션 SSOT는 프로젝트 루트 eval/questions.json",
+  "questions": [
+    {
+      "id": 1,
+      "category": "A_FACT",
+      "question": "이 프로젝트의 기술 스택은?",
+      "maxScore": 2,
+      "expectNoAnswer": false,
+      "mustGrounded": true,
+      "minSourceCount": 1,
+      "mustContainAny": ["Java 17", "Spring Boot", "Ollama", "PostgreSQL", "pgvector", "Gradle"],
+      "mustContainAll": [],
+      "mustNotContain": ["React", "Node.js", "MySQL"]
+    },
+    {
+      "id": 8,
+      "category": "C_NO_ANSWER",
+      "question": "이 프로젝트의 2025년 매출은?",
+      "maxScore": 2,
+      "expectNoAnswer": true,
+      "mustGrounded": false,
+      "maxSourceCount": 0,
+      "mustContainAll": [],
+      "mustContainAny": [],
+      "mustNotContain": []
+    }
+  ]
+}

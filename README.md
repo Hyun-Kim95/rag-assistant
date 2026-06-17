@@ -46,11 +46,27 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 
 ## RAG 평가
 
-동일 10문항으로 RAG on/off를 비교한 기록입니다.
+고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자동 측정**합니다.
+각 문항의 `score`·`grounded`·`sources`·`noAnswer`를 룰 기반으로 채점해 JSON/Markdown 리포트로 남깁니다.
+
+```bash
+# RAG on (검색 + no-answer 정책)
+gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
+# RAG off (LLM만, 대조군)
+gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_OFF"
+```
+
+산출물 (`eval/reports/`):
+
+- `latest-rag-on.{json,md}` / `latest-rag-off.{json,md}` — 모드별 최신 결과
+- `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)
+- `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)
+
+수동 측정 기록 (자동화 이전):
 
 - [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — baseline
 - [`docs/RAG_EVAL_v1.1.md`](docs/RAG_EVAL_v1.1.md) — FAQ chunk·prompt 개선
-- [`docs/RAG_EVAL_v2.md`](docs/RAG_EVAL_v2.md) — RAG on vs off
+- [`docs/RAG_EVAL_v2.md`](docs/RAG_EVAL_v2.md) — RAG on vs off (자동 재현 기준)
 
 ## 한계
 

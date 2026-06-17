@@ -1,5 +1,20 @@
 # Copy to application-local.yml for machine-specific settings.
 # application-local.yml is ignored by git.
+#
+# === 로컬 실행 체크리스트 ===
+# 1) PostgreSQL + pgvector (기본: localhost:15432 / DB rag_assistant)
+# 2) Ollama: ollama pull qwen2.5:7b && ollama pull nomic-embed-text
+# 3) cp application-local.yml.example application-local.yml 후 password 수정
+# 4) 일반 앱: gradlew.bat bootRun
+# 5) RAG 평가 자동 실행 (Ollama+DB 필요, 앱 기동 후 10문항 1회):
+#    .\gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
+#    .\gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_OFF"
+#    산출물 (eval/reports/ — latest·compare 는 Git 커밋, runs/ 는 gitignore):
+#      eval/reports/latest-rag-on.json|.md
+#      eval/reports/latest-rag-off.json|.md
+#      eval/reports/compare-latest.md   (on·off 둘 다 실행 후)
+#      eval/reports/runs/{timestamp}_{MODE}.json|.md  (로컬만)
+# 평가는 CLI 플래그로만 켭니다. 아래 yml에 rag.eval 항목을 넣을 필요 없습니다.
 
 spring:
   config:

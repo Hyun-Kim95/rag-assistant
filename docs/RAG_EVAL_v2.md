@@ -2,6 +2,13 @@
 
 동일 10문항 × **RAG on**(v1.1 기준) vs **RAG off**(LLM만) 대비.
 
+> **자동 재현 가능 (2026-06):** 이 문서의 수동 측정은 이제 `eval/questions.json` + `RagEvalRunner`로 자동 실행할 수 있다.
+> 동일 10문항을 실행해 `score`·`grounded`·`sources`·`noAnswer`를 룰 기반으로 채점하고 `eval/reports/`에 JSON/Markdown으로 남긴다.
+> 실행법은 [`README.md`](../README.md) §RAG 평가, 설계 선택은 [`DECISIONS.md`](DECISIONS.md) §13 참고.
+>
+> **자동 실행 최신값:** RAG on **18/20**, RAG off **0/20** (`eval/reports/compare-latest.md`).
+> 수동 v2의 on 20/20과 차이는 **4번(Chroma) 문항 회귀** 때문이다. 자동 실행에서 LLM이 Context의 `DECISIONS.md` §3을 활용하지 못하고 "문서에 없다"고 답해 **0점**으로 채점됐다 (retrieval은 성공, generation/프롬프트 해석 문제). 룰 채점이 의도대로 오답을 잡은 사례다.
+
 ## 문서 관계
 
 | 문서 | 역할 |

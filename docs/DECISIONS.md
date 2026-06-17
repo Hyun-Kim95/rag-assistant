@@ -203,3 +203,30 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 ### 구현 위치
 - `ChatController.chatStream` — `SseEmitter`
 - `OllamaService.streamChat`, `ChatStreamEvent`
+
+## 13. RAG 평가 자동화 (2026-06)
+
+### 선택
+- 고정 질문 세트 `eval/questions.json`(루트, SSOT) + `RagEvalRunner`로 동일 10문항을 자동 실행
+- 결과: `score`·`grounded`·`sources`·`noAnswer`를 `eval/reports/`에 JSON(기계)·Markdown(사람)으로 저장
+- 실행 트리거는 **CLI 플래그**(`--rag.eval.enabled`), `application.yml`에 평가 키를 두지 않음
+- 절차·산출물 구조: [`ARCHITECTURE.md`](ARCHITECTURE.md) §11
+
+### 룰 기반 채점 (LLM-as-judge 미사용)
+- `EvalScorer`가 키워드(`mustContainAll/Any`)·금지어(`mustNotContain`)·`grounded`·`sources`·no-answer 문구로 0/1/2점 결정
+- **이유:** LLM judge는 비용·비결정성·편향이 있고, 본 코퍼스는 정답이 문서에 있는 closed-book QA라 결정적 룰로 회귀·추세를 잡기 충분
+- **한계:** 표현 변형에 약함 → 정밀 채점은 사람 리뷰로 보완 (현재는 1차 게이트 용도)
+
+### REST 대신 서비스 직접 호출
+- `RagEvalRunner`가 `RagService.chat`(on)·`OllamaService.chat`(off)를 직접 호출
+- **이유:** 평가 대상은 RAG 파이프라인 품질이지 REST 레이어가 아님 → 직렬화·포트·타임아웃 변수를 제거해 재현성 확보
+- `RAG_OFF`는 검색·`PromptBuilder` 없이 LLM만 (v2 대조군과 동일 의미)
+
+### 산출물 버전 관리 정책
+- 출력 루트는 `eval/reports/`(= `questions.json`과 같은 `eval/` 트리) — `build/`가 아니라 **Git 추적 경로**
+- `latest-{mode}`·`compare-latest.md`는 **커밋** (포폴·재현 증거)
+- `runs/{timestamp}_{MODE}`는 **gitignore** — 프롬프트 튜닝마다 쌓이는 이력은 로컬 전후 비교용
+- 모드별로 파일을 분리해 RAG on/off가 서로 덮어쓰지 않게 함
+
+### 알려진 회귀
+- 자동 실행 최신값 RAG on **18/20** — 4번(Chroma) 문항이 수동 v2의 2점에서 **0점**으로 회귀 ([`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)). retrieval은 성공하나 LLM이 Context를 활용 못 함 → 룰 채점이 오답으로 처리
