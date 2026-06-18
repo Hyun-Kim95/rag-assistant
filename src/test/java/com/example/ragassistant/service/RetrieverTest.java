@@ -2,6 +2,7 @@ package com.example.ragassistant.service;
 
 import com.example.ragassistant.config.RagProperties;
 import com.example.ragassistant.domain.SearchHit;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.example.ragassistant.repository.ChunkRepository;
 import com.example.ragassistant.repository.EmbeddingRepository;
 import com.example.ragassistant.search.Reranker;
@@ -54,7 +55,8 @@ class RetrieverTest {
     }
 
     private Retriever retriever(RagProperties props) {
-        return new Retriever(embeddingService, embeddingRepository, chunkRepository, props, reranker);
+        return new Retriever(embeddingService, embeddingRepository, chunkRepository, props, reranker,
+                new QueryTelemetryContext());
     }
 
     /**

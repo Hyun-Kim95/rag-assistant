@@ -74,7 +74,8 @@
 - 브라우저 UI (`static/`), Swagger, `local` 프로필 debug API
 - RAG 평가 자동화: `eval/questions.json` 고정 세트 → `RagEvalRunner`(CLI 플래그) → `eval/reports/` JSON·MD (§11)
 - RAG 품질 기록: [`RAG_EVAL_v1.md`](RAG_EVAL_v1.md) · [`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md) · [`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)
-- 아직 없음: repo migration SQL, PDF OCR, 운영 배포
+- 운영 관측성: 요청별 구조적 로그(requestId·단계 지연·grounded·rerankFallback) + Health 심화(ollama·db·reranker) (§12)
+- 아직 없음: repo migration SQL, PDF OCR, 질의 로그 DB 저장(chat_logs), 메트릭 수집기(Prometheus), 운영 배포
 
 ## 4. 패키지 구조
 
@@ -119,6 +120,11 @@ com.example.ragassistant
 ├── search
 │   ├── RrfFusion
 │   └── Reranker            (TEI cross-encoder /rerank, 2단계 retrieval)
+├── observability
+│   ├── QueryTelemetry          (요청 1건 지표 POJO)
+│   ├── QueryTelemetryContext   (ThreadLocal 수집기 + 구조적 로그)
+│   ├── NoAnswerReason          (EMPTY_HITS | LLM_NO_ANSWER)
+│   └── RequestIdFilter         (MDC requestId + X-Request-Id 헤더)
 ├── eval
 │   ├── RagEvalRunner       (ApplicationRunner, --rag.eval.enabled)
 │   ├── EvalMode            (RAG_ON | RAG_OFF)
@@ -137,6 +143,7 @@ com.example.ragassistant
 │   ├── FaqBootstrap
 │   ├── Retriever
 │   ├── PromptBuilder
+│   ├── HealthService       (ollama·db·reranker readiness)
 │   └── RagService
 └── exception
     ├── GlobalExceptionHandler
@@ -154,7 +161,7 @@ com.example.ragassistant
 ### Health
 | Method | Path | 설명 |
 |---|---|---|
-| GET | `/api/health` | 서비스 상태 |
+| GET | `/api/health` | 앱 + 의존성(ollama·database·reranker) 상태. `DOWN`이면 503 (§12) |
 
 ### Debug (개발용, `local` 프로필)
 | Method | Path | 설명 |
@@ -417,3 +424,56 @@ LLM-as-judge 없이 **결정적 룰**로 0/1/2점. 문항 정의(`eval/questions
 | `runs/{timestamp}_{MODE}.{json,md}` | gitignore | 실행 이력 (로컬 튜닝용) |
 
 질문 세트(`eval/questions.json`)가 SSOT다. 최신 자동 실행 결과·해석은 [`RAG_EVAL_v2.md`](RAG_EVAL_v2.md).
+
+## 12. 운영 관측성 (요청 로그 · Health)
+
+실험(eval)에서 검증된 파이프라인이 운영에서도 안정적으로 동작하는지 보기 위한 최소 관측성. 별도 인프라(메트릭 수집기·로그 DB) 없이 **구조적 로그 + Health**만 둔다.
+
+### 요청 상관관계 (requestId)
+
+- `RequestIdFilter`(`OncePerRequestFilter`, 최우선)가 요청마다 `requestId`를 MDC에 넣고 응답 헤더 `X-Request-Id`로 돌려준다.
+- 클라이언트가 보낸 `X-Request-Id`가 있으면 재사용, 없으면 생성(8자).
+- 스트리밍은 `ChatController`가 별도 스레드에서 처리하므로 `requestId`를 그 스레드 MDC로 전파한다.
+
+### 구조적 요청 로그 (`rag.telemetry`)
+
+`QueryTelemetryContext`(ThreadLocal)가 RAG 요청 1건의 지표를 모아 **INFO 한 줄**로 남긴다. 질문 원문·답변은 남기지 않는다(지표만 → PII 회피). 활성 컨텍스트가 없으면(eval runner 등) no-op.
+
+```
+query requestId=ab12cd34 hits=8 topScore=0.8312 grounded=true noAnswer=- embedMs=42 retrieveMs=15 rerankMs=120 genMs=2100 totalMs=2290 rerankFallback=false
+```
+
+| 필드 | 의미 | 기록 위치 |
+|---|---|---|
+| `requestId` | 요청 상관관계 (헤더와 동일) | `RequestIdFilter` → MDC |
+| `hits` / `topScore` | LLM에 넘긴 context 수 / 1위 점수(rerank on이면 rerank score) | `RagService` |
+| `grounded` / `noAnswer` | 근거 기반 여부 / no-answer 사유(`EMPTY_HITS`·`LLM_NO_ANSWER`·`-`) | `RagService` |
+| `embedMs` / `retrieveMs` / `rerankMs` / `genMs` | 단계별 지연(임베딩·후보검색·rerank·LLM 생성) | `Retriever`·`RagService` |
+| `totalMs` | 요청 전체(begin→end) | `QueryTelemetryContext` |
+| `rerankFallback` | TEI 실패로 fallback 탔는지 (`-`=rerank 미수행) | `Reranker` |
+
+- `embedMs`/`retrieveMs`/`rerankMs`로 병목이 임베딩·검색·rerank·LLM 중 어디인지 분해된다.
+- `rerankFallback=true`는 TEI 다운 시 degraded 동작을 그대로 드러낸다(§14 DECISIONS의 fallback과 정합).
+
+### Health 심화 (`GET /api/health`)
+
+`HealthService`가 의존성 readiness를 짧은 타임아웃으로 점검한다.
+
+| 의존성 | 점검 | 비고 |
+|---|---|---|
+| `database` | `Connection.isValid(2)` | core |
+| `ollama` | `GET {base}/api/tags` 2xx | core |
+| `reranker` | `GET {base}/health` 2xx | rerank off면 `DISABLED`(상태 무관) |
+
+```json
+{ "status": "DEGRADED", "service": "rag-assistant",
+  "dependencies": { "ollama": "UP", "database": "UP", "reranker": "DOWN" } }
+```
+
+| status | 조건 | HTTP |
+|---|---|---|
+| `UP` | core UP + (reranker UP 또는 DISABLED) | 200 |
+| `DEGRADED` | core UP + reranker DOWN | 200 |
+| `DOWN` | database 또는 ollama DOWN | 503 |
+
+reranker DOWN을 `DOWN`이 아닌 `DEGRADED`로 둔 건, fallback으로 RAG가 계속 동작하기 때문이다.

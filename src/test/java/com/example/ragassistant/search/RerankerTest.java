@@ -1,6 +1,7 @@
 package com.example.ragassistant.search;
 
 import com.example.ragassistant.domain.SearchHit;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -34,7 +35,8 @@ class RerankerTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://tei");
         server = MockRestServiceServer.bindTo(builder).build();
-        reranker = new Reranker(builder.build());
+        // 활성 telemetry 컨텍스트 없이 record*는 no-op → 실제 인스턴스로 충분
+        reranker = new Reranker(builder.build(), new QueryTelemetryContext());
     }
 
     /**

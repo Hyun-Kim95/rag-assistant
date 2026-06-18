@@ -1,6 +1,7 @@
 package com.example.ragassistant.search;
 
 import com.example.ragassistant.domain.SearchHit;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +22,11 @@ public class Reranker {
     private static final Logger log = LoggerFactory.getLogger(Reranker.class);
 
     private final RestClient rerankerRestClient;
+    private final QueryTelemetryContext telemetry;
 
-    public Reranker(RestClient rerankerRestClient) {
+    public Reranker(RestClient rerankerRestClient, QueryTelemetryContext telemetry) {
         this.rerankerRestClient = rerankerRestClient;
+        this.telemetry = telemetry;
     }
 
     public List<SearchHit> rerank(String query, List<SearchHit> candidates, int topN) {
@@ -45,6 +48,7 @@ public class Reranker {
             }
 
             // 응답은 score 내림차순. index로 원본 후보 매핑 + score를 rerank score로 교체.
+            telemetry.recordRerankFallback(false);
             return Arrays.stream(scores)
                     .filter(s -> s.index() >= 0 && s.index() < candidates.size())
                     .limit(topN)
@@ -59,6 +63,7 @@ public class Reranker {
     }
 
     private List<SearchHit> fallback(List<SearchHit> candidates, int topN) {
+        telemetry.recordRerankFallback(true);
         return candidates.stream().limit(topN).toList();
     }
 

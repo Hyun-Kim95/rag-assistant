@@ -4,7 +4,10 @@ import com.example.ragassistant.domain.SearchHit;
 import com.example.ragassistant.dto.ChatResponse;
 import com.example.ragassistant.dto.ChatStreamEvent;
 import com.example.ragassistant.dto.SourceCitation;
+import com.example.ragassistant.observability.NoAnswerReason;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -29,12 +32,18 @@ public class RagService {
     private final PromptBuilder promptBuilder;
     private final OllamaService ollamaService;
     private final ObjectMapper objectMapper;
+    private final QueryTelemetryContext telemetry;
 
-    public RagService(Retriever retriever, PromptBuilder promptBuilder, OllamaService ollamaService, ObjectMapper objectMapper) {
+    public RagService(Retriever retriever, PromptBuilder promptBuilder, OllamaService ollamaService, ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
         this.retriever = retriever;
         this.promptBuilder = promptBuilder;
         this.ollamaService = ollamaService;
         this.objectMapper = objectMapper;
+        this.telemetry = telemetry;
+    }
+
+    private static long msSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
     /**
@@ -45,20 +54,30 @@ public class RagService {
         if (!StringUtils.hasText(question)) {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
-        List<SearchHit> hits = retriever.retrieve(question.trim());
-        // min-score 통과 chunk 없음 → LLM 호출 없이 no-answer (환각·비용 방지)
-        if (hits.isEmpty()) {
-            return ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
+        telemetry.begin(MDC.get("requestId"));
+        try {
+            List<SearchHit> hits = retriever.retrieve(question.trim());
+            // min-score 통과 chunk 없음 → LLM 호출 없이 no-answer (환각·비용 방지)
+            if (hits.isEmpty()) {
+                telemetry.recordResult(0, null, false, NoAnswerReason.EMPTY_HITS);
+                return ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
+            }
+            String prompt = promptBuilder.build(hits, question);
+            long tGen = System.nanoTime();
+            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt));
+            telemetry.recordGenerationMs(msSince(tGen));
+            boolean grounded = isGrounded(answer);
+            telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,
+                    grounded ? null : NoAnswerReason.LLM_NO_ANSWER);
+
+            List<SourceCitation> sources = grounded
+                    ? hits.stream().map(SourceCitation::from).toList()
+                    : List.of();   // no-answer면 출처 비우기
+
+            return new ChatResponse(grounded ? answer : NO_ANSWER_MESSAGE, sources, grounded);
+        } finally {
+            telemetry.endAndLog();
         }
-        String prompt = promptBuilder.build(hits, question);
-        String answer = sanitizeLlmAnswer(ollamaService.chat(prompt));
-        boolean grounded = isGrounded(answer);
-
-        List<SourceCitation> sources = grounded
-                ? hits.stream().map(SourceCitation::from).toList()
-                : List.of();   // no-answer면 출처 비우기
-
-        return new ChatResponse(grounded ? answer : NO_ANSWER_MESSAGE, sources, grounded);
     }
 
     /**
@@ -121,18 +140,24 @@ public class RagService {
         if (!StringUtils.hasText(question)) {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
+        telemetry.begin(MDC.get("requestId"));
         try {
             List<SearchHit> hits = retriever.retrieve(question.trim());
             if (hits.isEmpty()) {
+                telemetry.recordResult(0, null, false, NoAnswerReason.EMPTY_HITS);
                 sendDone(emitter, ChatResponse.noAnswer(NO_ANSWER_MESSAGE));
                 emitter.complete();
                 return;
             }
             String prompt = promptBuilder.build(hits, question);
+            long tGen = System.nanoTime();
             String fullAnswer = sanitizeLlmAnswer(ollamaService.streamChat(prompt, piece ->
                     sendEvent(emitter, "delta", ChatStreamEvent.delta(piece))
             ));
+            telemetry.recordGenerationMs(msSince(tGen));
             boolean grounded = isGrounded(fullAnswer);
+            telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,
+                    grounded ? null : NoAnswerReason.LLM_NO_ANSWER);
             ChatResponse response = grounded
                     ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true)
                     : ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
@@ -140,6 +165,8 @@ public class RagService {
             emitter.complete();
         } catch (Exception ex) {
             emitter.completeWithError(ex);
+        } finally {
+            telemetry.endAndLog();
         }
     }
     private void sendEvent(SseEmitter emitter, String eventName, ChatStreamEvent payload) {

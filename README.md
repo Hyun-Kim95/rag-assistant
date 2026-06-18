@@ -46,7 +46,7 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 | `DELETE` | `/api/documents/{id}` | 문서 삭제 |
 | `POST` | `/api/chat` | RAG 응답 (JSON) |
 | `POST` | `/api/chat/stream` | RAG 스트리밍 (SSE) |
-| `GET` | `/api/health` | 상태 확인 |
+| `GET` | `/api/health` | 앱 + 의존성(ollama·db·reranker) 상태 (DOWN이면 503) |
 
 `local` 프로필: Swagger http://localhost:8080/swagger-ui.html, debug API (`/api/debug/...`)
 

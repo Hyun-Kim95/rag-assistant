@@ -2,9 +2,11 @@ package com.example.ragassistant.controller;
 
 import com.example.ragassistant.dto.ChatRequest;
 import com.example.ragassistant.dto.ChatResponse;
+import com.example.ragassistant.observability.RequestIdFilter;
 import com.example.ragassistant.service.RagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,7 +39,18 @@ public class ChatController {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
         SseEmitter emitter = new SseEmitter(5 * 60 * 1000L); // 5분
-        new Thread(() -> ragService.chatStream(request.question(), emitter)).start();
+        // requestId(MDC)는 요청 스레드에만 있으므로, 스트림을 처리할 별도 스레드로 전파한다.
+        String requestId = MDC.get(RequestIdFilter.MDC_KEY);
+        new Thread(() -> {
+            if (requestId != null) {
+                MDC.put(RequestIdFilter.MDC_KEY, requestId);
+            }
+            try {
+                ragService.chatStream(request.question(), emitter);
+            } finally {
+                MDC.remove(RequestIdFilter.MDC_KEY);
+            }
+        }).start();
         return emitter;
     }
 }

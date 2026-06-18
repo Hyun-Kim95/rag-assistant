@@ -2,6 +2,7 @@ package com.example.ragassistant.service;
 
 import com.example.ragassistant.config.RagProperties;
 import com.example.ragassistant.domain.SearchHit;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.example.ragassistant.repository.ChunkRepository;
 import com.example.ragassistant.repository.EmbeddingRepository;
 import com.example.ragassistant.search.Reranker;
@@ -24,13 +25,19 @@ public class Retriever {
     private final ChunkRepository chunkRepository;
     private final RagProperties ragProperties;
     private final Reranker reranker;
+    private final QueryTelemetryContext telemetry;
 
-    public Retriever(EmbeddingService embeddingService, EmbeddingRepository embeddingRepository, ChunkRepository chunkRepository, RagProperties ragProperties, Reranker reranker) {
+    public Retriever(EmbeddingService embeddingService, EmbeddingRepository embeddingRepository, ChunkRepository chunkRepository, RagProperties ragProperties, Reranker reranker, QueryTelemetryContext telemetry) {
         this.embeddingService = embeddingService;
         this.embeddingRepository = embeddingRepository;
         this.chunkRepository = chunkRepository;
         this.ragProperties = ragProperties;
         this.reranker = reranker;
+        this.telemetry = telemetry;
+    }
+
+    private static long msSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
     /**
@@ -54,7 +61,10 @@ public class Retriever {
         if (candidates.isEmpty()) {
             return List.of();   // 후보 없음 → no-answer (RagService에서 처리)
         }
-        return reranker.rerank(question, candidates, ragProperties.rerankTopN());
+        long t0 = System.nanoTime();
+        List<SearchHit> reranked = reranker.rerank(question, candidates, ragProperties.rerankTopN());
+        telemetry.recordRerankMs(msSince(t0));
+        return reranked;
     }
 
     /**
@@ -78,8 +88,13 @@ public class Retriever {
      * embed → cosine top-k → min-score
      */
     private List<SearchHit> retrieveVectorOnly(String question, int limit) {
+        long tEmbed = System.nanoTime();
         float[] queryVector = embeddingService.embed(question);
+        telemetry.recordEmbeddingMs(msSince(tEmbed));
+
+        long tSearch = System.nanoTime();
         List<SearchHit> hits = embeddingRepository.searchSimilar(queryVector, limit);
+        telemetry.recordRetrievalMs(msSince(tSearch));
         return filterByVectorMinScore(hits);
     }
 
@@ -92,7 +107,11 @@ public class Retriever {
      * → lexical-only로 끌어올린 chunk는 vector score 0이어도 lexical threshold를 통과해야 함.
      */
     private List<SearchHit> retrieveHybrid(String question, int vectorLimit, int lexicalLimit) {
+        long tEmbed = System.nanoTime();
         float[] queryVector = embeddingService.embed(question);
+        telemetry.recordEmbeddingMs(msSince(tEmbed));
+
+        long tSearch = System.nanoTime();
         List<SearchHit> vectorHits = filterByVectorMinScore(
                 embeddingRepository.searchSimilar(queryVector, vectorLimit)
         );
@@ -100,13 +119,16 @@ public class Retriever {
                 question, lexicalLimit, ragProperties.lexicalMinScore()
         );
         if (vectorHits.isEmpty() && lexicalHits.isEmpty()) {
+            telemetry.recordRetrievalMs(msSince(tSearch));
             return List.of();
         }
-        return RrfFusion.fuse(
+        List<SearchHit> fused = RrfFusion.fuse(
                 vectorHits, lexicalHits,
                 ragProperties.rrfK(),
                 Math.max(vectorLimit, lexicalLimit)   // 후보 폭만큼 RRF 출력
         );
+        telemetry.recordRetrievalMs(msSince(tSearch));
+        return fused;
     }
 
     /**
