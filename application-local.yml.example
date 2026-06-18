@@ -4,9 +4,14 @@
 # === 로컬 실행 체크리스트 ===
 # 1) PostgreSQL + pgvector (기본: localhost:15432 / DB rag_assistant)
 # 2) Ollama: ollama pull qwen2.5:7b && ollama pull nomic-embed-text
-# 3) cp application-local.yml.example application-local.yml 후 password 수정
-# 4) 일반 앱: gradlew.bat bootRun
-# 5) RAG 평가 자동 실행 (Ollama+DB 필요, 앱 기동 후 10문항 1회):
+# 3) TEI reranker (rag.rerank-enabled=true 기본 on): bge-reranker-v2-m3 컨테이너 기동
+#    - dietManagement docker-compose의 tei-reranker 서비스 사용:  docker compose up -d tei-reranker
+#    - 호스트 http://localhost:8085 노출 (app application.yml의 reranker base-url과 일치)
+#    - 최초 1회 모델 다운로드 (~수백 MB). 준비 전 호출은 fallback(원본 순서)으로 동작
+#    - TEI를 띄우지 않으면: rerank 건너뛰고 원본 RRF/cosine 순서 유지 (RAG는 정상 동작)
+# 4) cp application-local.yml.example application-local.yml 후 password 수정
+# 5) 일반 앱: gradlew.bat bootRun
+# 6) RAG 평가 자동 실행 (Ollama+DB 필요, 앱 기동 후 10문항 1회):
 #    .\gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
 #    .\gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_OFF"
 #    산출물 (eval/reports/ — latest·compare 는 Git 커밋, runs/ 는 gitignore):

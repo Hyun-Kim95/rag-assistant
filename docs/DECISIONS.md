@@ -106,10 +106,10 @@
 프롬프트·출구·후처리 상세: [`ARCHITECTURE.md`](ARCHITECTURE.md) §8.
 
 ### 검색·품질 (알려진 한계)
-- 기본 retrieval은 vector-only (`rag.hybrid-enabled: false`); hybrid는 §11
-- FAQ chunk·top-k 10으로 정책 질문(6·7번) 안정화 ([`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md))
-- min-score는 Java filter (SQL WHERE 미적용)
-- RAG on/off 10문항 비교 완료 ([`RAG_EVAL_v2.md`](RAG_EVAL_v2.md))
+- 현재 기본 retrieval은 **hybrid on**(`rag.hybrid-enabled: true`, §11) + **rerank on**(`rag.rerank-enabled: true`, §14)
+- FAQ chunk·top-k로 정책 질문(6·7번) 안정화 ([`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md))
+- min-score는 Java filter (SQL WHERE 미적용), 후보 단계에만 적용 (rerank score엔 미적용 — §14)
+- RAG on/off 10문항 비교 완료 ([`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)); rerank 도입 후 자동 RAG on 20/20
 
 ## 9. 예외 처리·문서 정책 (2026-06)
 
@@ -228,5 +228,41 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 - `runs/{timestamp}_{MODE}`는 **gitignore** — 프롬프트 튜닝마다 쌓이는 이력은 로컬 전후 비교용
 - 모드별로 파일을 분리해 RAG on/off가 서로 덮어쓰지 않게 함
 
-### 알려진 회귀
-- 자동 실행 최신값 RAG on **18/20** — 4번(Chroma) 문항이 수동 v2의 2점에서 **0점**으로 회귀 ([`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)). retrieval은 성공하나 LLM이 Context를 활용 못 함 → 룰 채점이 오답으로 처리
+### 알려진 회귀 (해소됨 → §14)
+- (이력) reranker 도입 전 자동 RAG on **18/20** — 4번(Chroma)·또는 5·6번(정책)이 코퍼스 자가오염으로 0점이던 시기가 있었음.
+- **현재 §14 reranker + 프롬프트 보완으로 RAG on 20/20** 회복. retrieval 순위 문제(5·6)는 rerank로, "근거 함의 미활용"(4번)은 프롬프트 예외 규칙으로 해결.
+
+## 14. Reranker + 2단계 retrieval (2026-06)
+
+### 배경 / 문제
+- 정책·개념형 질문(5·6번)이 반복 0점. 디버그 결과 retrieval은 성공하나, RAG 동작을 설명하는 **메타 문서 chunk**가 top-k를 채우고 실제 정답 chunk가 밀려나는 **코퍼스 자가오염**.
+- 원인: 기존 `top-k`(=10) 하나가 **검색 후보 수**와 **프롬프트 context 수**를 겸함.
+
+### 선택
+- retrieval을 2단계화: `retrieve(넓은 후보) → rerank → 상위 top-n만 context`.
+- reranker: **전용 cross-encoder `BAAI/bge-reranker-v2-m3`** (HF TEI 컨테이너, GPU/CPU). Spring이 HTTP `POST /rerank` 호출.
+- 기본 on (`rag.rerank-enabled: true`). 후보 폭 `candidate-top-k=30`(vector·lexical 두 leg 공통), context `rerank-top-n=8`.
+
+### 이유
+- 1차 검색(bi-encoder, 임베딩 cosine)은 질문·문서를 따로 벡터화해 빠르지만 거칠다 → 메타 chunk를 못 거름.
+- 2차 rerank(cross-encoder)는 `[질문+chunk]`를 함께 입력해 관련도를 직접 판정 → 정밀. 소수 후보(30)에만 적용해 비용 감당.
+- 전용 모델을 별도 컨테이너로 둬 Ollama·DB와 분리(횡단 부하 격리), GPU 활용.
+
+### 파이프라인 / 구현 위치
+- `Retriever.retrieve`: `rerank-enabled` 분기. on이면 candidate-top-k로 넓게 뽑고(`retrieveCandidates`) → `Reranker.rerank` → top-n. off면 기존 top-k 경로.
+- `search.Reranker`: TEI `/rerank`(`{query, texts}` → `[{index, score}]`) 호출, 응답 `index`로 원본 후보 재매핑하며 `SearchHit` score를 rerank score로 교체.
+- `config.RerankerProperties`(`rag.reranker.*`) + `AppConfig.rerankerRestClient`(connect/read **timeout** 필수).
+- **min-score 위치:** cosine/lexical min-score는 **후보 단계에만** 적용. rerank score는 스케일이 달라(음수 가능) 별도 임계 없이 상위 top-n만 사용.
+
+### fallback (회귀 가드)
+- TEI 호출 실패(연결 불가·타임아웃·파싱 오류) 시 `Reranker`가 예외를 삼키고 **원본 검색 순서 + top-n 컷**으로 반환 → RAG 중단 없음.
+- 검증: TEI 다운 상태 RAG on **13/20**(품질만 저하, no-answer 군 유지, 앱 정상 완주).
+
+### 프롬프트 보완 (4번 회복)
+- rerank가 정답 chunk를 1순위로 올려도, "pgvector 대신 Chroma를 안 쓴 이유" 질문에서 LLM이 근거(= pgvector 선택 이유)를 "Chroma 미사용 이유"로 매핑하지 않아 0점.
+- `PromptBuilder` 규칙에 예외 추가: **[Context]가 'A 대신 B 선택/사용 + 이유'를 명시하면 'A를 쓰지 않은 이유'로 답해도 됨**(근거 기반이므로 추측 아님). no-answer 군은 Context가 비어 이 규칙에 도달하지 않아 영향 없음.
+
+### 영향 / 한계
+- `SourceCitation.score` 의미가 cosine→**rerank score**로 바뀜(응답 필드 스케일 변화). debug `/api/debug/retrieval/compare`는 의도적으로 **rerank 전** 후보를 보여줌(진단용).
+- eval: rerank off 16/20 → rerank on **20/20**(5·6 회복 + 4 회복 + no-answer 유지). 설계·계획 상세는 [`PLAN_RERANKER_TOPK.md`](PLAN_RERANKER_TOPK.md).
+- 1차 검색 후보(candidate-top-k=30) 밖으로 정답이 밀리면 rerank로도 못 살림 → candidate 폭 튜닝 또는 메타 코퍼스 정리 별도 검토.

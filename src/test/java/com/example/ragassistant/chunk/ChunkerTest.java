@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class ChunkerTest {
     private Chunker chunker(int size, int overlap) {
-        RagProperties props = new RagProperties(size, overlap, 3, 0.2, 768, false, 10, 0.1, 60);
+        RagProperties props = new RagProperties(size, overlap, 3, 0.2, 768, false, 10, 0.1, 60, 30, 6, false);
         return new Chunker(props);
     }
 

@@ -7,6 +7,7 @@ import lombok.Getter;
  * vector-only: score = cosine similarity (1에 가까울수록 유사).
  * hybrid: 정렬은 RRF, score 필드는 출처 표시용으로
  * vector score 우선·없으면 lexical similarity.
+ * rerank 시 rerank score로 교체됨
  */
 @Getter
 public class SearchHit {
@@ -22,5 +23,12 @@ public class SearchHit {
         this.documentName = documentName;
         this.content = content;
         this.score = score;
+    }
+
+    /**
+     * score만 교체한 복제본 (rerank score 반영용). 불변 유지.
+     */
+    public SearchHit withScore(double newScore) {
+        return new SearchHit(chunkId, documentName, content, newScore);
     }
 }

@@ -40,6 +40,14 @@ rag:
   lexical-top-k: 10         # lexical leg 후보 수 (보통 vector top-k와 동일)
   lexical-min-score: 0.1    # pg_trgm similarity 하한 (0~1)
   rrf-k: 60                 # RRF 상수, 논문/Elasticsearch 관례값
+  # --- rerank (2단계 retrieval) ---
+  rerank-enabled: true      # 기본 on. 끄면 기존 top-k 동작
+  candidate-top-k: 30       # rerank 전 후보 폭 (vector·lexical 공통)
+  rerank-top-n: 8           # rerank 후 context 개수
+  reranker:
+    base-url: http://localhost:8085   # 1단계 TEI 컨테이너
+    model: BAAI/bge-reranker-v2-m3
+    timeout-ms: 5000        # CPU/GPU 추론 지연 대비. 초과 시 fallback
 
 logging:
   level:
