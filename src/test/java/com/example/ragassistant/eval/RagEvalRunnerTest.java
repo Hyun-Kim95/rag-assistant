@@ -1,7 +1,7 @@
 package com.example.ragassistant.eval;
 
 import com.example.ragassistant.dto.ChatResponse;
-import com.example.ragassistant.service.OllamaService;
+import com.example.ragassistant.llm.ChatModelClient;
 import com.example.ragassistant.service.PromptBuilder;
 import com.example.ragassistant.service.RagService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,9 +20,7 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * RagEvalRunner 오케스트레이션 검증.
@@ -38,7 +36,7 @@ class RagEvalRunnerTest {
     private RagService ragService;
 
     @Mock
-    private OllamaService ollamaService;
+    private ChatModelClient ollamaService;
 
     /** 파일 I/O는 이 테스트에서 검증하지 않음 — EvalReportWriterTest 담당 */
     @Mock

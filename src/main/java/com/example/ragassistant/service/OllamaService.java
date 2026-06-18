@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 
 import com.example.ragassistant.exception.OllamaResponseException;
 import com.example.ragassistant.exception.OllamaUnavailableException;
+import com.example.ragassistant.llm.ChatModelClient;
+import com.example.ragassistant.llm.EmbeddingModelClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -19,7 +21,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 @Service
-public class OllamaService {
+public class OllamaService implements ChatModelClient, EmbeddingModelClient {
 
     private final RestClient ollamaRestClient;
     private final OllamaProperties properties;
@@ -37,6 +39,7 @@ public class OllamaService {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public String chat(String prompt) {
         Map<String, Object> request = Map.of(
                 "model", properties.chatModel(),
@@ -62,6 +65,7 @@ public class OllamaService {
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public List<Double> embed(String text) {
         Map<String, Object> request = Map.of(
                 "model", properties.embeddingModel(),
@@ -130,6 +134,7 @@ public class OllamaService {
      * @param onDelta 토큰(또는 content 조각)마다 호출
      * @return 전체 assistant 답변 (`RagService.isGrounded` 판별용)
      */
+    @Override
     public String streamChat(String prompt, Consumer<String> onDelta) {
         Map<String, Object> request = buildChatRequest(prompt, true);
 

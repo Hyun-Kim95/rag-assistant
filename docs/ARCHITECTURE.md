@@ -61,7 +61,7 @@
   (TEI 실패 시 fallback: 원본 순서 + top-n 컷)
 ```
 
-설계·이유·fallback·eval은 [`DECISIONS.md`](DECISIONS.md) §14, 계획은 [`PLAN_RERANKER_TOPK.md`](PLAN_RERANKER_TOPK.md).
+설계·이유·fallback·eval은 [`DECISIONS.md`](DECISIONS.md) §14.
 
 ## 3. 구현 범위 (요약)
 
@@ -117,6 +117,9 @@ com.example.ragassistant
 │   ├── DocumentRepository
 │   ├── ChunkRepository
 │   └── EmbeddingRepository
+├── llm
+│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)
+│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 미포함)
 ├── search
 │   ├── RrfFusion
 │   └── Reranker            (TEI cross-encoder /rerank, 2단계 retrieval)
@@ -134,7 +137,7 @@ com.example.ragassistant
 │   ├── EvalResult / EvalReport
 │   └── EvalReportWriter    (eval/reports/ JSON·MD)
 ├── service
-│   ├── OllamaService
+│   ├── OllamaService       (implements ChatModelClient·EmbeddingModelClient — 단일 LLM 구현)
 │   ├── DocumentService
 │   ├── ChunkService
 │   ├── EmbeddingService

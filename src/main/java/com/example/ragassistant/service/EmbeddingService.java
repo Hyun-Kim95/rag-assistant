@@ -1,6 +1,7 @@
 package com.example.ragassistant.service;
 
 import com.example.ragassistant.config.RagProperties;
+import com.example.ragassistant.llm.EmbeddingModelClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -14,10 +15,10 @@ import java.util.List;
 @Service
 public class EmbeddingService {
 
-    private final OllamaService ollamaService;
+    private final EmbeddingModelClient ollamaService;
     private final RagProperties ragProperties;
 
-    public EmbeddingService(OllamaService ollamaService, RagProperties ragProperties) {
+    public EmbeddingService(EmbeddingModelClient ollamaService, RagProperties ragProperties) {
         this.ollamaService = ollamaService;
         this.ragProperties = ragProperties;
     }

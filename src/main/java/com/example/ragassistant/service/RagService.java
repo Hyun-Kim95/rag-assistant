@@ -4,6 +4,7 @@ import com.example.ragassistant.domain.SearchHit;
 import com.example.ragassistant.dto.ChatResponse;
 import com.example.ragassistant.dto.ChatStreamEvent;
 import com.example.ragassistant.dto.SourceCitation;
+import com.example.ragassistant.llm.ChatModelClient;
 import com.example.ragassistant.observability.NoAnswerReason;
 import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,11 +31,11 @@ public class RagService {
 
     private final Retriever retriever;
     private final PromptBuilder promptBuilder;
-    private final OllamaService ollamaService;
+    private final ChatModelClient ollamaService;
     private final ObjectMapper objectMapper;
     private final QueryTelemetryContext telemetry;
 
-    public RagService(Retriever retriever, PromptBuilder promptBuilder, OllamaService ollamaService, ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
+    public RagService(Retriever retriever, PromptBuilder promptBuilder, ChatModelClient ollamaService, ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
         this.retriever = retriever;
         this.promptBuilder = promptBuilder;
         this.ollamaService = ollamaService;

@@ -1,7 +1,7 @@
 package com.example.ragassistant.eval;
 
 import com.example.ragassistant.dto.ChatResponse;
-import com.example.ragassistant.service.OllamaService;
+import com.example.ragassistant.llm.ChatModelClient;
 import com.example.ragassistant.service.RagService;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ public class RagEvalRunner implements ApplicationRunner {
     private final ApplicationArguments args;
     private final EvalQuestionSet questionSet;
     private final RagService ragService;
-    private final OllamaService ollamaService;
+    private final ChatModelClient ollamaService;
     private final EvalScorer scorer;
     private final EvalReportWriter reportWriter;
 
@@ -40,7 +40,7 @@ public class RagEvalRunner implements ApplicationRunner {
             ApplicationArguments args,
             EvalQuestionSet questionSet,
             RagService ragService,
-            OllamaService ollamaService,
+            ChatModelClient ollamaService,
             EvalScorer scorer,
             EvalReportWriter reportWriter
     ) {

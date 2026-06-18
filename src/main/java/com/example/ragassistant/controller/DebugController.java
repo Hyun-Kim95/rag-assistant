@@ -1,17 +1,16 @@
 package com.example.ragassistant.controller;
 
 import com.example.ragassistant.dto.ChunkResponse;
+import com.example.ragassistant.llm.ChatModelClient;
+import com.example.ragassistant.llm.EmbeddingModelClient;
 import com.example.ragassistant.service.ChunkService;
-import com.example.ragassistant.service.OllamaService;
-
-import java.util.List;
-import java.util.Map;
-
 import com.example.ragassistant.service.Retriever;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Debug", description = "개발용 디버그 API (운영 비노출)")
 @Profile("local")
@@ -19,24 +18,26 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/debug")
 public class DebugController {
 
-    private final OllamaService ollamaService;
+    private final ChatModelClient chatModel;
+    private final EmbeddingModelClient embeddingModel;
     private final ChunkService chunkService;
     private final Retriever retriever;
 
-    public DebugController(OllamaService ollamaService, ChunkService chunkService, Retriever retriever) {
-        this.ollamaService = ollamaService;
+    public DebugController(ChatModelClient chatModel, EmbeddingModelClient embeddingModel, ChunkService chunkService, Retriever retriever) {
+        this.chatModel = chatModel;
+        this.embeddingModel = embeddingModel;
         this.chunkService = chunkService;
         this.retriever = retriever;
     }
 
     @GetMapping("/ollama/chat")
     public Map<String, String> chat(@RequestParam(defaultValue = "Hello") String prompt) {
-        return Map.of("response", ollamaService.chat(prompt));
+        return Map.of("response", chatModel.chat(prompt));
     }
 
     @GetMapping("/ollama/embed")
     public Map<String, Object> embed(@RequestParam(defaultValue = "hello world") String text) {
-        List<Double> embedding = ollamaService.embed(text);
+        List<Double> embedding = embeddingModel.embed(text);
         return Map.of(
                 "dimensions", embedding.size(),
                 "preview", embedding.subList(0, Math.min(5, embedding.size()))
