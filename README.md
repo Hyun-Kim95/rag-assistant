@@ -20,6 +20,8 @@ Ollama와 PostgreSQL pgvector로 업로드 문서를 검색해 답하는 Spring 
 
 **필요:** JDK 17, Ollama (`http://localhost:11434`), PostgreSQL + pgvector, TEI reranker (`http://localhost:8085`, 기본 on·미기동 시 fallback)
 
+> **의존성 등급:** Ollama·DB는 **필수**(없으면 동작 불가 → `/api/health` `DOWN`·503). TEI reranker는 **품질 의존성**으로, 미기동 시 fallback(원본 검색 순서)으로 **서비스는 계속 동작**하되 검색 품질만 떨어진다 → `/api/health`는 `DEGRADED`(200)로 표시.
+
 ```bash
 ollama pull qwen2.5:7b
 ollama pull nomic-embed-text
@@ -46,7 +48,7 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 | `DELETE` | `/api/documents/{id}` | 문서 삭제 |
 | `POST` | `/api/chat` | RAG 응답 (JSON) |
 | `POST` | `/api/chat/stream` | RAG 스트리밍 (SSE) |
-| `GET` | `/api/health` | 앱 + 의존성(ollama·db·reranker) 상태 (DOWN이면 503) |
+| `GET` | `/api/health` | 앱 + 의존성 상태. core(ollama·db) DOWN → `DOWN`·503, reranker만 DOWN → `DEGRADED`·200 |
 
 `local` 프로필: Swagger http://localhost:8080/swagger-ui.html, debug API (`/api/debug/...`)
 

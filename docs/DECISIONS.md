@@ -160,7 +160,7 @@
 - **vector leg:** pgvector cosine top-k (`EmbeddingRepository.searchSimilar`)
 - **lexical leg:** PostgreSQL `pg_trgm` `similarity()` (`ChunkRepository.searchLexical`)
 - **병합:** RRF(Reciprocal Rank Fusion), `k=60` (`RrfFusion`)
-- **기본값:** `rag.hybrid-enabled: false` — vector-only와 동일 동작
+- **기본값:** `rag.hybrid-enabled: true` (현행) — `false`로 끄면 vector-only와 동일 동작
 
 ### 이유
 - 설정 키·모델명·포트 등 **문서에 그대로 있는 토큰** 질의 보완

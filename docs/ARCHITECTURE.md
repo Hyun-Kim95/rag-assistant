@@ -30,7 +30,7 @@
 
 ### 질의 응답 흐름
 
-**vector-only** (`rag.hybrid-enabled: false`, 기본):
+**vector-only** (`rag.hybrid-enabled: false`):
 
 ```text
 사용자 질문
@@ -41,7 +41,7 @@
   → Answer + Sources
 ```
 
-**hybrid** (`rag.hybrid-enabled: true`):
+**hybrid** (`rag.hybrid-enabled: true`, 기본):
 
 ```text
 사용자 질문

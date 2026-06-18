@@ -181,7 +181,7 @@ v1.1 본문 측정 **이후** `PromptBuilder`·`contentPrompt`·`FaqCatalog` 정
 
 | 항목               | 상태                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
-| hybrid search 1차 | ✅ `[DECISIONS.md](DECISIONS.md)` §11 — 기본 off; `nomic-embed-text` compare에서 vector/hybrid 순위 차이 확인 |
+| hybrid search 1차 | ✅ `[DECISIONS.md](DECISIONS.md)` §11 — (v1.1 시점) 기본 off, 현재는 기본 on; `nomic-embed-text` compare에서 vector/hybrid 순위 차이 확인 |
 
 
 ---
