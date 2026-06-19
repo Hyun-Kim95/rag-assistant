@@ -49,6 +49,16 @@ rag:
     model: BAAI/bge-reranker-v2-m3
     timeout-ms: 5000        # CPU/GPU 추론 지연 대비. 초과 시 fallback
 
+llm:
+  default-provider: ollama-7b
+  fallback-order: [ollama-7b, groq]   # primary 죽으면 SaaS로 폴백
+  openai-compat:
+    enabled: false                    # 로컬에서 키와 함께 true (application-local.yml)
+    name: groq
+    base-url: https://api.groq.com/openai/v1
+    model: llama-3.1-8b-instant
+    timeout-ms: 8000
+
 logging:
   level:
     com.example.ragassistant: INFO

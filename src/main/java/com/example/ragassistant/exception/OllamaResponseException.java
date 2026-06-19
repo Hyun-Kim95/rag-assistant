@@ -5,11 +5,12 @@ package com.example.ragassistant.exception;
  * GlobalExceptionHandler → HTTP 502.
  * "연결은 됐는데 결과가 깨짐"과 503을 구분해 디버깅·모니터링에 유리하다.
  */
-public class OllamaResponseException extends RuntimeException {
+public class OllamaResponseException extends LlmResponseException {
 
     public OllamaResponseException(String message) {
         super(message);
     }
+
     public OllamaResponseException(String message, Throwable cause) {
         super(message, cause);
     }

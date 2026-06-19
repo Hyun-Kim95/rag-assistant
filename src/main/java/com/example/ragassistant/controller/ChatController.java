@@ -28,7 +28,7 @@ public class ChatController {
     @Operation(summary = "RAG 채팅", description = "업로드된 문서를 검색해 근거 기반 답변 + 출처 반환")
     @PostMapping
     public ChatResponse chat(@RequestBody ChatRequest request) {
-        return ragService.chat(request.question());
+        return ragService.chat(request.question(), request.provider());
     }
 
     @Operation(summary = "RAG 채팅 (스트리밍)", description = "SSE: delta → done(sources, grounded)")

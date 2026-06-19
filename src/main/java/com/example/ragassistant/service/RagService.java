@@ -47,11 +47,14 @@ public class RagService {
         return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
-    /**
-     * @param question 사용자 질문
-     * @return 답변 + sources + grounded
-     */
     public ChatResponse chat(String question) {
+        return chat(question, null);
+    }
+
+    /**
+     * @param provider (선택) 우선 사용할 chat provider. null이면 default 라우팅.
+     */
+    public ChatResponse chat(String question, String provider) {
         if (!StringUtils.hasText(question)) {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
@@ -65,7 +68,7 @@ public class RagService {
             }
             String prompt = promptBuilder.build(hits, question);
             long tGen = System.nanoTime();
-            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt));
+            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt, provider));
             telemetry.recordGenerationMs(msSince(tGen));
             boolean grounded = isGrounded(answer);
             telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,
@@ -75,7 +78,8 @@ public class RagService {
                     ? hits.stream().map(SourceCitation::from).toList()
                     : List.of();   // no-answer면 출처 비우기
 
-            return new ChatResponse(grounded ? answer : NO_ANSWER_MESSAGE, sources, grounded);
+            return new ChatResponse(grounded ? answer : NO_ANSWER_MESSAGE, sources, grounded,
+                    telemetry.currentProvider());
         } finally {
             telemetry.endAndLog();
         }
@@ -160,7 +164,8 @@ public class RagService {
             telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,
                     grounded ? null : NoAnswerReason.LLM_NO_ANSWER);
             ChatResponse response = grounded
-                    ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true)
+                    ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true
+                            , telemetry.currentProvider())
                     : ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
             sendDone(emitter, response);
             emitter.complete();

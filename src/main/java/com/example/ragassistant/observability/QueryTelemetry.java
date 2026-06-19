@@ -19,6 +19,8 @@ public class QueryTelemetry {
     private long rerankMs;
     private long generationMs;
     private Boolean rerankFallback;         // null = rerank 미수행(off/후보 없음)
+    private String provider;                // 실제 답변한 chat provider 이름 (null = LLM 미호출)
+    private boolean fallbackUsed;           // 폴백으로 다른 leg가 응답했는지
 
     QueryTelemetry(String requestId) {
         this.requestId = requestId;
@@ -59,6 +61,14 @@ public class QueryTelemetry {
         this.rerankFallback = fallback;
     }
 
+    void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    void setFallbackUsed(boolean fallbackUsed) {
+        this.fallbackUsed = fallbackUsed;
+    }
+
     int hitCount() {
         return hitCount;
     }
@@ -93,5 +103,13 @@ public class QueryTelemetry {
 
     Boolean rerankFallback() {
         return rerankFallback;
+    }
+
+    String provider() {
+        return provider;
+    }
+
+    boolean fallbackUsed() {
+        return fallbackUsed;
     }
 }

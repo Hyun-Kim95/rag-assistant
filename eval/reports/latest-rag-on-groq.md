@@ -4,8 +4,9 @@
 |---|---|
 | version | v2 |
 | mode | RAG_ON |
-| ranAt | 2026-06-19 17:33 |
-| avgLatencyMs | 11389 |
+| provider | groq |
+| ranAt | 2026-06-19 17:40 |
+| avgLatencyMs | 4301 |
 | total | **19 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |
@@ -28,11 +29,7 @@
 **score:** 2/2
 
 ```
-- Spring Boot
-- Ollama
-- PostgreSQL pgvector
-
-`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에서 확인할 수 있습니다.
+Spring Boot, Ollama, PostgreSQL pgvector.
 ```
 
 ### 2. Ollama base-url은?
@@ -40,7 +37,7 @@
 **score:** 2/2
 
 ```
-Ollama base-url은 `http://localhost:11434`입니다.
+DECISIONS.md에 따르면 Ollama base-url은 http://localhost:11434입니다.
 ```
 
 ### 3. chat / embedding model 이름은?
@@ -65,7 +62,7 @@ Ollama base-url은 `http://localhost:11434`입니다.
 **score:** 2/2
 
 ```
-Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위해서입니다.
+chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 때문에 Spring AI를 전면 도입하지 않았습니다.
 ```
 
 ### 6. 검색 hit가 없을 때 앱은 어떻게 동작하나?

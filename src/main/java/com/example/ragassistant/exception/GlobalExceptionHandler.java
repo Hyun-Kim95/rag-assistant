@@ -19,11 +19,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("EMPTY_FILE", ex.getMessage()));
     }
+
     @ExceptionHandler(UnsupportedDocumentFormatException.class)
     public ResponseEntity<ErrorResponse> handleUnsupportedFormat(UnsupportedDocumentFormatException ex) {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("UNSUPPORTED_FORMAT", ex.getMessage()));
     }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
@@ -36,11 +38,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("OLLAMA_UNAVAILABLE", ex.getMessage()));
     }
+
     @ExceptionHandler(OllamaResponseException.class)
     public ResponseEntity<ErrorResponse> handleOllamaResponse(OllamaResponseException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResponse("OLLAMA_RESPONSE_ERROR", ex.getMessage()));
     }
+
+    // --- LLM Router (공통/전체 실패) ---
+    @ExceptionHandler(AllProvidersUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleAllProviders(AllProvidersUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("LLM_ALL_PROVIDERS_UNAVAILABLE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LlmUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleLlmUnavailable(LlmUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("LLM_UNAVAILABLE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LlmResponseException.class)
+    public ResponseEntity<ErrorResponse> handleLlmResponse(LlmResponseException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResponse("LLM_RESPONSE_ERROR", ex.getMessage()));
+    }
+
     // --- DB ---
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ErrorResponse> handleDatabase(DataAccessException ex) {
@@ -50,20 +73,29 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("DATABASE_UNAVAILABLE", "데이터베이스에 연결할 수 없습니다."));
     }
+
     // --- Document ---
     @ExceptionHandler(DocumentNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(DocumentNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("DOCUMENT_NOT_FOUND", ex.getMessage()));
     }
+
     @ExceptionHandler(DuplicateDocumentException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateDocumentException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("DUPLICATE_DOCUMENT", ex.getMessage()));
     }
+
     @ExceptionHandler(DocumentParseException.class)
     public ResponseEntity<ErrorResponse> handleDocumentParse(DocumentParseException ex) {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("DOCUMENT_PARSE_FAILED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnknownProviderException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownProvider(UnknownProviderException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse("UNKNOWN_PROVIDER", ex.getMessage()));
     }
 }

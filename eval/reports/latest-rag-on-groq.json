@@ -1,7 +1,7 @@
 {
   "version" : "v2",
   "mode" : "RAG_ON",
-  "ranAt" : "2026-06-19T08:33:20.946090200Z",
+  "ranAt" : "2026-06-19T08:40:58.568659900Z",
   "totalScore" : 19,
   "maxTotalScore" : 20,
   "results" : [ {
@@ -9,7 +9,7 @@
     "category" : "A_FACT",
     "question" : "이 프로젝트의 기술 스택은?",
     "mode" : "RAG_ON",
-    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector\n\n`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에서 확인할 수 있습니다.",
+    "answer" : "Spring Boot, Ollama, PostgreSQL pgvector.",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "ARCHITECTURE.md",
@@ -20,7 +20,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 659,
       "snippet" : "리·문서 정책 (2026-06)\n\n### Ollama 오류\n- `OllamaService.postForMap()`: chat/embed 공통 HTTP 호출\n- 연결 실패 (`ResourceAccessException`) → 503 `OLLAMA_UNAVAILABLE`\n- HTTP 4xx/5xx·응답 body/형식 오류 → 502 `OLLAMA_RESPONS...",
-      "score" : 7.321813E-4
+      "score" : 7.2932884E-4
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 588,
@@ -61,18 +61,18 @@
     "category" : "A_FACT",
     "question" : "Ollama base-url은?",
     "mode" : "RAG_ON",
-    "answer" : "Ollama base-url은 `http://localhost:11434`입니다.",
+    "answer" : "DECISIONS.md에 따르면 Ollama base-url은 http://localhost:11434입니다.",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 604,
       "snippet" : "rieve·no-answer 판정은 스트림 시작 전 동기 처리 (hits empty → `done`만 no-answer)\n\n### Error Response 예시\n\n`ErrorResponse` 형식: `{\"error\":\"<코드>\",\"message\":\"<메시지>\"}`\n\n```json\n{\n  \"error\": \"OLLAMA_UNAVAILABLE\",\n  \"mess...",
-      "score" : 0.9285385
+      "score" : 0.9284088
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 667,
       "snippet" : "ine 우선 표시\n\n### 로컬 DDL (repo migration 미포함)\n```sql\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\nCREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm\n    ON document_chunks USING gin (content gin_trgm...",
-      "score" : 0.7136312
+      "score" : 0.71412987
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 640,
@@ -82,7 +82,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 639,
       "snippet" : "e`는 TEI 다운 시 degraded 동작을 그대로 드러낸다(§14 DECISIONS의 fallback과 정합).\n\n### Health 심화 (`GET /api/health`)\n\n`HealthService`가 의존성 readiness를 짧은 타임아웃으로 점검한다.\n\n| 의존성 | 점검 | 비고 |\n|---|---|---|\n| `database` | `Co...",
-      "score" : 0.11656274
+      "score" : 0.1169656
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 605,
@@ -97,7 +97,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 621,
       "snippet" : "Service` sanitize와 정합).\n\n### LLM 응답 후처리 (`RagService`)\n\n- `sanitizeLlmAnswer`: `[Answer]`·`[no-answer]`·마지막 줄 `Context에서/Context에/Context만` 메타 잔여물 제거\n- `isGrounded`: `NO_ANSWER_MESSAGE`와 동일 → `grounde...",
-      "score" : 0.015967654
+      "score" : 0.016029147
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 631,
@@ -119,7 +119,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 643,
       "snippet" : "lama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base URL: `http://localhost:11434`\n- Chat model: `qwen2.5:7b`\n- Embedding model: `nomic-embed-text`\n\n### 이유\n- Windows 로컬 개발에 적합\n- OpenAI-compatible API...",
-      "score" : 0.9692078
+      "score" : 0.96926606
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 642,
@@ -129,32 +129,32 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 610,
       "snippet" : "`application.yml`\n\n```yaml\nollama:\n  base-url: http://localhost:11434\n  chat-model: qwen2.5:7b\n  embedding-model: nomic-embed-text\n  temperature: 0\n\nrag:\n  chunk-size: 450\n  chunk-overlap: 150\n  top-k...",
-      "score" : 0.7043636
+      "score" : 0.7036513
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 648,
       "snippet" : "- 구현체는 **Ollama 단일**(`OllamaService implements ChatModelClient, EmbeddingModelClient`) — 기존 \"외부 LLM API 없이 로컬 실행\"(§2) 결정 유지. SaaS·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시...",
-      "score" : 0.6874202
+      "score" : 0.6875251
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.68299675
+      "score" : 0.682891
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 647,
       "snippet" : "er 정책 변경 시 수정 지점이 명확함\n\n### LLM 호출 경계 (2026-06)\n- Ollama 호출을 `llm.ChatModelClient`(chat·streamChat)·`llm.EmbeddingModelClient`(embed) **인터페이스 뒤로 분리**. 소비자(`RagService`·`EmbeddingService`·`RagEvalRunner...",
-      "score" : 0.66006285
+      "score" : 0.66050094
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 649,
       "snippet" : "chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변...",
-      "score" : 0.5980775
+      "score" : 0.59801877
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 592,
       "snippet" : "ry\n│   ├── DocumentRepository\n│   ├── ChunkRepository\n│   └── EmbeddingRepository\n├── llm\n│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)\n│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 ...",
-      "score" : 0.4743268
+      "score" : 0.47423553
     } ],
     "noAnswer" : false,
     "score" : 2,
@@ -176,7 +176,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.6575384
+      "score" : 0.6578682
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 664,
@@ -196,12 +196,12 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 605,
       "snippet" : ". Docker/서비스 실행 및 base-url(http://localhost:11434)을 확인하세요.\"\n}\n```\n\nHTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 처리** 참고.\n\n## 6. DB 설계 (pgvector)\n\n### documents (migration SQL은 repo 미포함)\n| column |...",
-      "score" : 0.0018895386
+      "score" : 0.001882186
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 607,
       "snippet" : "-|---|\n| id | bigserial PK | |\n| document_id | bigint FK → documents **ON DELETE CASCADE** | |\n| chunk_index | int | |\n| content | text | chunk 본문 |\n\n### document_embeddings (수동 SQL)\n| column | type |...",
-      "score" : 0.0016809418
+      "score" : 0.0016743992
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 601,
@@ -217,7 +217,7 @@
     "category" : "B_POLICY",
     "question" : "Spring AI를 전면 도입하지 않은 이유?",
     "mode" : "RAG_ON",
-    "answer" : "Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위해서입니다.",
+    "answer" : "chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 때문에 Spring AI를 전면 도입하지 않았습니다.",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "DECISIONS.md",
@@ -337,7 +337,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 651,
       "snippet" : "형·긴 위키에서 retrieval recall 개선 시도\n- 텍스트 정규화: `\\r\\n` → `\\n` 후 고정 길이 분할, overlap으로 문맥 단절 완화\n- chunk metadata: `documentId`, `documentName`, `chunkIndex`\n\n### 구현\n- `Chunker` → `VectorStoreService` 업로드 시 DB...",
-      "score" : 0.1112412
+      "score" : 0.111627996
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 653,
@@ -405,6 +405,6 @@
     "maxScore" : 2,
     "failReasons" : [ ]
   } ],
-  "provider" : null,
-  "avgLatencyMs" : 11389
+  "provider" : "groq",
+  "avgLatencyMs" : 4301
 }

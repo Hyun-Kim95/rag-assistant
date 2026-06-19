@@ -11,7 +11,8 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 @Configuration
-@EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class})
+@EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class,
+        RoutingProperties.class, OpenAiCompatProperties.class})
 public class AppConfig {
 
     @Bean
@@ -33,6 +34,18 @@ public class AppConfig {
                 .build();
     }
 
+    // OpenAI 호환(Groq 등) 전용 RestClient — connect/read timeout 필수(폴백 트리거 조건)
+    @Bean
+    RestClient openAiCompatRestClient(OpenAiCompatProperties properties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofMillis(properties.timeoutMs() > 0 ? properties.timeoutMs() : 8000));
+        return RestClient.builder()
+                .baseUrl(properties.baseUrl())
+                .requestFactory(factory)
+                .build();
+    }
+    
     @Bean
     DocumentParser documentParser() {
         return new DocumentParser();

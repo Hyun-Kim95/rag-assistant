@@ -4,8 +4,9 @@
 |---|---|
 | version | v2 |
 | mode | RAG_ON |
-| ranAt | 2026-06-19 17:33 |
-| avgLatencyMs | 11389 |
+| provider | ollama-7b |
+| ranAt | 2026-06-19 17:40 |
+| avgLatencyMs | 11424 |
 | total | **19 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |

@@ -5,7 +5,7 @@ package com.example.ragassistant.exception;
  * GlobalExceptionHandler → HTTP 503.
  * Spring RestClient는 연결 실패 시 ResourceAccessException을 던진다.
  */
-public class OllamaUnavailableException extends RuntimeException {
+public class OllamaUnavailableException extends LlmUnavailableException {
 
     public OllamaUnavailableException(String message, Throwable cause) {
         super(message, cause);

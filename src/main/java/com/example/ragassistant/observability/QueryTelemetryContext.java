@@ -66,6 +66,28 @@ public class QueryTelemetryContext {
         }
     }
 
+    public void recordProvider(String name) {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.setProvider(name);
+        }
+    }
+
+    public void recordFallbackUsed() {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.setFallbackUsed(true);
+        }
+    }
+
+    /**
+     * 현재 요청에서 실제 응답한 provider 이름. 활성 컨텍스트 없으면 null.
+     */
+    public String currentProvider() {
+        QueryTelemetry t = holder.get();
+        return t == null ? null : t.provider();
+    }
+
     /**
      * 구조적 로그 한 줄을 남기고 ThreadLocal을 정리한다. 활성 컨텍스트가 없으면 무시.
      * 반드시 finally에서 호출해 ThreadLocal 누수를 막는다.
@@ -77,7 +99,8 @@ public class QueryTelemetryContext {
         }
         try {
             log.info("query requestId={} hits={} topScore={} grounded={} noAnswer={} "
-                            + "embedMs={} retrieveMs={} rerankMs={} genMs={} totalMs={} rerankFallback={}",
+                            + "embedMs={} retrieveMs={} rerankMs={} genMs={} totalMs={} rerankFallback={}"
+                            + "provider={} fallbackUsed={}",
                     t.requestId(),
                     t.hitCount(),
                     t.topScore() == null ? "-" : String.format("%.4f", t.topScore()),
@@ -88,7 +111,9 @@ public class QueryTelemetryContext {
                     t.rerankMs(),
                     t.generationMs(),
                     t.totalMs(),
-                    t.rerankFallback() == null ? "-" : t.rerankFallback());
+                    t.rerankFallback() == null ? "-" : t.rerankFallback(),
+                    t.provider() == null ? "-" : t.provider(),
+                    t.fallbackUsed());
         } finally {
             holder.remove();
         }

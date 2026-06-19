@@ -272,3 +272,51 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 - `SourceCitation.score` 의미가 cosine→**rerank score**로 바뀜(응답 필드 스케일 변화). debug `/api/debug/retrieval/compare`는 의도적으로 **rerank 전** 후보를 보여줌(진단용).
 - eval: rerank off 16/20 → rerank on **20/20**(5·6 회복 + 4 회복 + no-answer 유지).
 - 1차 검색 후보(candidate-top-k=30) 밖으로 정답이 밀리면 rerank로도 못 살림 → candidate 폭 튜닝 또는 메타 코퍼스 정리 별도 검토.
+
+## 15. Model Router (다중 LLM 라우팅 + 폴백, 2026-06)
+
+### 배경 / 목표
+- chat 추론을 **2개 이상 provider로 라우팅하고 실패 시 폴백**하며, 그 결과를 헬스·관측·평가에 연결해 "운영 가능한 Model Router"로 만든다.
+- §4(LLM 호출 경계)에서 만들어 둔 `llm.ChatModelClient` seam 위에 **소비자(`RagService`) 코드 변경 없이** 라우터·2nd provider만 얹는다.
+- 설계·계약 상세: [`MODEL_ROUTER_PLAN.md`](MODEL_ROUTER_PLAN.md).
+
+### 선택
+- **2nd provider = OpenAI 호환 클라이언트 1개**(`OpenAiCompatChatClient`, `/v1/chat/completions`). base-url 교체만으로 SaaS(Groq·OpenAI·Gemini 호환 등)와 self-hosted(vLLM 등)를 모두 커버 → "SaaS & self-hosted 동시 연동"을 한 구현으로 충족.
+- **라우터 = `RoutingChatModelClient`(`@Primary`)**: `[요청 provider?] + default-provider + fallback-order` 1회 순회(중복 제거). 동기 `chat`만 폴백, **`streamChat`은 폴백 없이 default leg 1개**(토큰 스트림 중 끊기면 폴백이 지저분해지므로 1차 제외).
+- **라우팅 정책 1차 = 단순 명시 규칙**(설정 체인 + 요청 provider 우선). 질문 길이·난이도 기반 분기는 `chain()` 확장 지점만 남기고 후속.
+- **공통 예외 타입 도입**: `LlmUnavailableException`(503)·`LlmResponseException`(502)을 상위 타입으로 두고 `Ollama*Exception`이 이를 상속 → 라우터는 상위 타입만 catch해 폴백, 기존 `GlobalExceptionHandler` 매핑은 그대로 유지. 전체 실패는 `AllProvidersUnavailableException`(503 `LLM_ALL_PROVIDERS_UNAVAILABLE`).
+- **무료 전략(비용 0)**: Ollama(`qwen2.5:7b`)를 primary, **Groq 무료 티어(`llama-3.1-8b-instant`)**를 fallback. vLLM은 GPU 필요라 "무료"가 아니어서 제외.
+
+### 무료/비밀값 운영
+- `application.yml`은 `llm.openai-compat.enabled: false` 기본(키 없이도 기동, groq는 `available()=false`로 스킵 → Ollama 단독 = 기존 동작).
+- 키는 `application-local.yml`(gitignore)에서 `enabled: true` + `api-key`로만. `application.yml`(커밋 대상)에 키 금지.
+- 가용성 점검은 **config 수준**(`available()` = enabled + api-key 존재). 실제 도달성 핑은 하지 않음 — 비용·레이트리밋 0, 실장애는 폴백이 흡수.
+
+### 헬스 status 규칙 변경
+- 기존 `core = ollama·db`에서 **`database`만 core**로. "chat provider ≥1 UP"이 아니면 `DOWN`.
+- `/api/health` `dependencies`는 provider 이름별 상태(`ollama-7b`, `groq`, …) + `database` + `reranker`. Ollama leg는 `/api/tags` 실제 핑(UP/DOWN), SaaS leg는 config 수준(UP/DISABLED).
+
+### 관측 / 평가
+- `QueryTelemetry`에 `provider`·`fallbackUsed` 추가 → 요청 로그 한 줄에 어떤 leg가 응답했는지·폴백 여부 기록. `ChatResponse.provider`로 API 응답에도 노출(검색 hit 0건이면 null).
+- `RagEvalRunner`에 `--rag.eval.providers=ollama-7b,groq` → leg별 RAG_ON 실행, `latest-rag-on-{provider}.{json,md}` + `compare-providers.md`(provider별 total·avgLatencyMs·grounded).
+
+### 결과 (2026-06, 자동 측정)
+| provider | total | avgLatencyMs | grounded |
+| --- | ---: | ---: | ---: |
+| ollama-7b | 19/20 | 11,424 | 7/10 |
+| groq | 19/20 | 4,301 | 7/10 |
+
+- 동일 품질(19/20)에 **Groq가 약 2.6배 빠름** → self-hosted vs SaaS leg의 지연·품질 트레이드오프를 숫자로 제시.
+- (6번 1/2는 라우터 무관 — 룰 기반 채점기의 키워드 커버리지 한계, §13.)
+
+### 구현 위치
+- `llm/ChatModelClient`(`name()`/`available()`/`chat(prompt,provider)` default), `llm/OpenAiCompatChatClient`, `llm/RoutingChatModelClient`(`@Primary`), `llm/ChatPrompts`(공유 system 프롬프트).
+- `config/RoutingProperties`·`OpenAiCompatProperties` + `AppConfig`(`openAiCompatRestClient` timeout 빈).
+- `exception/Llm*Exception`·`AllProvidersUnavailableException`·`UnknownProviderException` + `GlobalExceptionHandler`.
+- `service/HealthService`(provider 상태·status 규칙), `observability/QueryTelemetry*`, `eval/RagEvalRunner`·`EvalReport`·`EvalReportWriter`.
+
+### 한계
+- **임베딩은 라우팅 밖**(Ollama `nomic-embed-text`, 차원 768 고정). Ollama가 없으면 retrieve(질문 임베딩)부터 실패 → chat 폴백만으론 RAG 전체를 구제하지 못함.
+- 로컬 sLM leg(작은 모델) 동시 사용은 `OllamaProperties.chatModel()` 단일 모델 고정이라 모델 파라미터화·빈 분리 필요(미구현).
+- 요청 provider 지정은 **동기 `/api/chat`만**. 스트리밍은 default 라우팅.
+- SaaS 헬스는 config 수준(실제 도달성 아님).

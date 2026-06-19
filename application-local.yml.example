@@ -32,3 +32,13 @@ spring:
 #   datasource:
 #     url: jdbc:postgresql://localhost:15432/rag_assistant
 #     username: rag_assistant
+
+# === Model Router: OpenAI 호환 2nd provider (Groq 무료 티어) ===
+# 키가 없으면 enabled=false(기본)로 두면 됩니다. groq는 available()=false 로 라우팅에서 스킵되고
+# Ollama 단독으로 동작합니다. 폴백/요청 라우팅을 실제로 보려면 아래 둘을 채우세요.
+# - 키 발급: https://console.groq.com → API Keys (gsk_... )
+# - api-key 는 절대 application.yml(커밋 대상)에 두지 말 것. 이 파일(gitignore)에만.
+# llm:
+#   openai-compat:
+#     enabled: true
+#     api-key: gsk_your_groq_key

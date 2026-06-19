@@ -11,22 +11,23 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * 앱 기동 후 평가를 1회 실행하고 JSON/MD를 쓴 뒤 종료한다.
  * 실행 예:
- * gradlew bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
- * 전제:
- * - Ollama + DB 기동
- * - FaqBootstrap 이 FAQ/코퍼스 인덱싱 완료 (@Order로 FAQ 이후 실행)
+ *      gradlew bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
+ *      gradlew bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag.eval.providers=ollama-7b,groq"
+ * 전제: Ollama + DB 기동, FaqBootstrap 인덱싱 완료(@Order로 FAQ 이후).
  */
 @Component
-@Order(100) // FaqBootstrap(기본 0) 이후
+@Order(100)
 public class RagEvalRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(RagEvalRunner.class);
     private final ApplicationArguments args;
@@ -64,33 +65,66 @@ public class RagEvalRunner implements ApplicationRunner {
                         : "eval/questions.json"
         );
         List<EvalQuestion> questions = questionSet.load(questionsPath);
+
+        List<String> providers = parseProviders(args.getOptionValues("rag.eval.providers"));
+        if (providers.isEmpty()) {
+            runAndWrite(mode, questions, null); // 기존 동작: default 라우팅 단일 실행
+            return;
+        }
+        // provider별 비교 실행
+        List<EvalReport> reports = new ArrayList<>();
+        for (String provider : providers) {
+            reports.add(runAndWrite(mode, questions, provider));
+        }
+        reportWriter.writeProviderCompare(reports);
+        log.info("RAG eval provider compare done: {}", providers);
+    }
+
+    private EvalReport runAndWrite(EvalMode mode, List<EvalQuestion> questions, String provider) throws IOException {
         List<EvalResult> results = new ArrayList<>();
-        log.info("RAG eval start: mode={}, questions={}", mode, questions.size());
+        long totalLatencyMs = 0;
+        log.info("RAG eval start: mode={}, provider={}, questions={}",
+                mode, provider == null ? "(default)" : provider, questions.size());
         for (EvalQuestion q : questions) {
-            ChatResponse response = runOnce(mode, q.question());
+            long t0 = System.nanoTime();
+            ChatResponse response = runOnce(mode, q.question(), provider);
+            long latencyMs = (System.nanoTime() - t0) / 1_000_000L;
+            totalLatencyMs += latencyMs;
             EvalResult result = scorer.score(q, mode, response);
             results.add(result);
-            log.info("#{} score={}/{} grounded={} sources={}",
+            log.info("#{} score={}/{} grounded={} sources={} latencyMs={}",
                     q.id(), result.score(), result.maxScore(),
-                    result.grounded(), result.sources().size());
+                    result.grounded(), result.sources().size(), latencyMs);
         }
         int total = results.stream().mapToInt(EvalResult::score).sum();
         int max = results.stream().mapToInt(EvalResult::maxScore).sum();
-        EvalReport report = new EvalReport("v2", mode, Instant.now(), total, max, results);
+        long avgLatencyMs = questions.isEmpty() ? 0 : totalLatencyMs / questions.size();
+        EvalReport report = new EvalReport("v2", mode, Instant.now(), total, max, results, provider, avgLatencyMs);
         reportWriter.write(report);
-        log.info("RAG eval done: {}/{}", total, max);
-        // 포폴/CI용: 평가만 하고 끝내려면 System.exit(0) 고려
+        log.info("RAG eval done: provider={} {}/{} avgLatencyMs={}",
+                provider == null ? "(default)" : provider, total, max, avgLatencyMs);
+        return report;
     }
 
-    private ChatResponse runOnce(EvalMode mode, String question) {
+    private ChatResponse runOnce(EvalMode mode, String question, String provider) {
         return switch (mode) {
-            case RAG_ON -> ragService.chat(question);
+            case RAG_ON -> ragService.chat(question, provider);
             case RAG_OFF -> {
-                // v2: contentPrompt + 질문만 (검색·Context 없음)
-                String raw = ollamaService.chat(question);
+                // v2: contentPrompt + 질문만 (검색·Context 없음). provider 지정 시 해당 leg.
+                String raw = ollamaService.chat(question, provider);
                 yield new ChatResponse(raw, List.of(), false);
             }
         };
+    }
+
+    private List<String> parseProviders(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(values.get(0).split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     private EvalMode parseMode(List<String> values) {
