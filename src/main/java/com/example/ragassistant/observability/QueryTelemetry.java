@@ -21,6 +21,7 @@ public class QueryTelemetry {
     private Boolean rerankFallback;         // null = rerank 미수행(off/후보 없음)
     private String provider;                // 실제 답변한 chat provider 이름 (null = LLM 미호출)
     private boolean fallbackUsed;           // 폴백으로 다른 leg가 응답했는지
+    private String difficulty;              // 난이도 라우팅 시 분류 결과(EASY/HARD), 아니면 null
 
     QueryTelemetry(String requestId) {
         this.requestId = requestId;
@@ -69,6 +70,10 @@ public class QueryTelemetry {
         this.fallbackUsed = fallbackUsed;
     }
 
+    void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
+    }
+
     int hitCount() {
         return hitCount;
     }
@@ -111,5 +116,9 @@ public class QueryTelemetry {
 
     boolean fallbackUsed() {
         return fallbackUsed;
+    }
+
+    String difficulty() {
+        return difficulty;
     }
 }

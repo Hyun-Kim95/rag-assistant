@@ -26,6 +26,8 @@ server:
 ollama:
   base-url: http://localhost:11434
   chat-model: qwen2.5:7b
+  small-chat-model: llama3.2:1b
+  classifier-model: qwen2.5:3b
   embedding-model: nomic-embed-text
   temperature: 0
 
@@ -50,8 +52,12 @@ rag:
     timeout-ms: 5000        # CPU/GPU 추론 지연 대비. 초과 시 fallback
 
 llm:
+  routing-strategy: fixed             # fixed(기본) | difficulty
   default-provider: ollama-7b
   fallback-order: [ollama-7b, groq]   # primary 죽으면 SaaS로 폴백
+  difficulty:                         # routing-strategy=difficulty 일 때만 사용
+    easy-provider: ollama-1b
+    hard-provider: ollama-7b
   openai-compat:
     enabled: false                    # 로컬에서 키와 함께 true (application-local.yml)
     name: groq

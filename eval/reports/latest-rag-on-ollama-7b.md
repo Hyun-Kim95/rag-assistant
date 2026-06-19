@@ -5,8 +5,8 @@
 | version | v2 |
 | mode | RAG_ON |
 | provider | ollama-7b |
-| ranAt | 2026-06-19 17:40 |
-| avgLatencyMs | 11424 |
+| ranAt | 2026-06-20 00:02 |
+| avgLatencyMs | 57631 |
 | total | **19 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |
@@ -33,7 +33,15 @@
 - Ollama
 - PostgreSQL pgvector
 
-`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에서 확인할 수 있습니다.
+`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：
+
+```korean
+- 스프링 부트
+- 올라마
+- PostgreSQL pgvector
+
+RAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술 스택을 사용하고 있습니다.
+```
 ```
 
 ### 2. Ollama base-url은?

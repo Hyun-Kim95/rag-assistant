@@ -30,6 +30,16 @@ public interface ChatModelClient {
     }
 
     /**
+     * 라우팅 분류용 텍스트(routingText)를 프롬프트와 분리해 받는 chat.
+     * - prompt: 모델에 실제로 보낼 (증강된) 프롬프트.
+     * - routingText: 난이도 분류 등 라우팅 판단에 쓸 원문(보통 사용자 질문).
+     * 단일 provider 구현체는 routingText를 무시한다(기본 구현).
+     */
+    default String chat(String prompt, String provider, String routingText) {
+        return chat(prompt, provider);
+    }
+
+    /**
      * 라우팅·헬스용 provider 식별자. 예: "ollama-7b", "groq".
      * RoutingChatModelClient 가 byName 맵 키와 fallback-order 매칭에 사용한다.
      */

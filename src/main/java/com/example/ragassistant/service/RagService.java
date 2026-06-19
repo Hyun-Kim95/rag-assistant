@@ -68,7 +68,7 @@ public class RagService {
             }
             String prompt = promptBuilder.build(hits, question);
             long tGen = System.nanoTime();
-            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt, provider));
+            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt, provider, question));
             telemetry.recordGenerationMs(msSince(tGen));
             boolean grounded = isGrounded(answer);
             telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,

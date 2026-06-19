@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record OllamaProperties(
         String baseUrl,
         String chatModel,
+        String smallChatModel,
+        String classifierModel,
         String embeddingModel,
         Double temperature
 ) {

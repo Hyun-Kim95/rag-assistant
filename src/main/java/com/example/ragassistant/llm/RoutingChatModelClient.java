@@ -21,9 +21,12 @@ import java.util.function.Consumer;
 /**
  * 다중 chat provider 라우팅 + 폴백.
  * - @Primary: 소비자(RagService 등)의 단일 ChatModelClient 주입을 이 라우터로 해소.
- * - chain: [defaultProvider, ...fallbackOrder] 1회 순회(중복 제거).
+ * - 전략(routing-strategy):
+ * - fixed: chain = [defaultProvider, ...fallbackOrder] (중복 제거).
+ * - difficulty: 분류기로 1차 leg 선택 → [picked, defaultProvider, ...fallbackOrder].
+ * - 명시 provider 요청은 전략보다 우선(분류 생략).
  * - 폴백 대상: LlmUnavailableException(연결)·LlmResponseException(응답). 동기 chat만.
- * - streamChat: 폴백 없이 사용 가능한 첫 provider 1개만
+ * - streamChat: 전략·폴백 없이 fixed 체인의 첫 가용 provider 1개만.
  */
 @Service
 @Primary
@@ -34,10 +37,12 @@ public class RoutingChatModelClient implements ChatModelClient {
     private final Map<String, ChatModelClient> byName;
     private final RoutingProperties routing;
     private final QueryTelemetryContext telemetry;
+    private final DifficultyClassifier classifier;
 
     public RoutingChatModelClient(List<ChatModelClient> all,
                                   RoutingProperties routing,
-                                  QueryTelemetryContext telemetry) {
+                                  QueryTelemetryContext telemetry,
+                                  DifficultyClassifier classifier) {
         Map<String, ChatModelClient> map = new LinkedHashMap<>();
         for (ChatModelClient c : all) {
             if (c instanceof RoutingChatModelClient) {
@@ -51,6 +56,7 @@ public class RoutingChatModelClient implements ChatModelClient {
         this.byName = map;
         this.routing = routing;
         this.telemetry = telemetry;
+        this.classifier = classifier;
     }
 
     @Override
@@ -60,12 +66,18 @@ public class RoutingChatModelClient implements ChatModelClient {
 
     @Override
     public String chat(String prompt) {
-        return chat(prompt, null);
+        return chat(prompt, null, prompt);
     }
 
     @Override
     public String chat(String prompt, String requestedProvider) {
-        List<String> chain = chain(requestedProvider);
+        return chat(prompt, requestedProvider, prompt);
+    }
+
+    @Override
+    public String chat(String prompt, String requestedProvider, String routingText) {
+        String picked = pickByStrategy(routingText, requestedProvider);
+        List<String> chain = chain(requestedProvider, picked);
         boolean fellBack = false;
         for (String n : chain) {
             ChatModelClient provider = byName.get(n);
@@ -89,8 +101,8 @@ public class RoutingChatModelClient implements ChatModelClient {
 
     @Override
     public String streamChat(String prompt, Consumer<String> onDelta) {
-        // 폴백 없음. 사용 가능한 첫 provider 1개만.
-        for (String n : chain(null)) {
+        // 전략·폴백 없음. fixed 체인의 첫 가용 provider 1개만.
+        for (String n : chain(null, null)) {
             ChatModelClient provider = byName.get(n);
             if (provider == null || !provider.available()) {
                 continue;
@@ -101,14 +113,39 @@ public class RoutingChatModelClient implements ChatModelClient {
         throw new AllProvidersUnavailableException("사용 가능한 chat provider 없음(stream)");
     }
 
-    /** [요청 provider?] + defaultProvider + fallbackOrder — 중복 제거. */
-    private List<String> chain(String requestedProvider) {
+    /**
+     * difficulty 전략일 때 분류 결과로 1차 leg를 고른다.
+     * - 명시 requestedProvider가 있으면 분류 생략(명시 우선).
+     * - fixed 전략이면 null.
+     */
+    private String pickByStrategy(String prompt, String requestedProvider) {
+        if (StringUtils.hasText(requestedProvider)) {
+            return null;
+        }
+        if (!"difficulty".equalsIgnoreCase(routing.routingStrategy())) {
+            return null;
+        }
+        RoutingProperties.Difficulty d = routing.difficulty();
+        if (d == null) {
+            return null;
+        }
+        DifficultyTier tier = classifier.classify(prompt);
+        telemetry.recordDifficulty(tier.name());
+        return tier == DifficultyTier.EASY ? d.easyProvider() : d.hardProvider();
+    }
+
+    /**
+     * [요청 provider | 난이도 picked] + defaultProvider + fallbackOrder — 중복 제거.
+     */
+    private List<String> chain(String requestedProvider, String picked) {
         List<String> chain = new ArrayList<>();
         if (StringUtils.hasText(requestedProvider)) {
             if (!byName.containsKey(requestedProvider)) {
                 throw new UnknownProviderException("알 수 없는 provider: " + requestedProvider);
             }
             chain.add(requestedProvider);
+        } else if (StringUtils.hasText(picked)) {
+            chain.add(picked); // 미등록 이름이면 루프에서 skip → default가 처리
         }
         if (StringUtils.hasText(routing.defaultProvider())) {
             chain.add(routing.defaultProvider());

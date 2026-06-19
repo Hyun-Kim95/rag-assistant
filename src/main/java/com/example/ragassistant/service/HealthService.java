@@ -4,6 +4,7 @@ import com.example.ragassistant.config.OllamaProperties;
 import com.example.ragassistant.config.RagProperties;
 import com.example.ragassistant.config.RerankerProperties;
 import com.example.ragassistant.llm.ChatModelClient;
+import com.example.ragassistant.llm.OllamaChatClient;
 import com.example.ragassistant.llm.RoutingChatModelClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,7 @@ public class HealthService {
                 continue; // 라우터 자신은 의존성이 아님
             }
             // Ollama leg 는 실제 /api/tags 핑, 그 외(SaaS)는 config 수준 가용성(D3)
-            String providerStatus = (c instanceof OllamaService)
+            String providerStatus = (c instanceof OllamaChatClient)
                     ? ollama
                     : (c.available() ? "UP" : "DISABLED");
             dependencies.put(c.name(), providerStatus);

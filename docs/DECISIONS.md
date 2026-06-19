@@ -317,6 +317,42 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 
 ### 한계
 - **임베딩은 라우팅 밖**(Ollama `nomic-embed-text`, 차원 768 고정). Ollama가 없으면 retrieve(질문 임베딩)부터 실패 → chat 폴백만으론 RAG 전체를 구제하지 못함.
-- 로컬 sLM leg(작은 모델) 동시 사용은 `OllamaProperties.chatModel()` 단일 모델 고정이라 모델 파라미터화·빈 분리 필요(미구현).
+- 로컬 sLM leg(작은 모델) 동시 사용 → **§16에서 구현**(`OllamaChatClient` 모델 파라미터화 + `ollama-1b` 빈 분리).
 - 요청 provider 지정은 **동기 `/api/chat`만**. 스트리밍은 default 라우팅.
 - SaaS 헬스는 config 수준(실제 도달성 아님).
+
+## 16. Model Router 심화 — 난이도 기반 라우팅 + 로컬 sLM leg (2026-06)
+
+### 배경
+- §15는 **fixed 라우팅**(요청 provider + 설정 체인 + 폴백)까지였다. 심화 목표는 **질문 난이도로 동적 분기**해 쉬운 질문은 작은 모델(sLM)로 싸게·빠르게, 어려운 질문만 큰 모델로 보내는 전략이 **이 코퍼스·하드웨어에서 실제로 이득인지**를 숫자로 검증하는 것.
+- §15 한계의 "로컬 sLM leg 미구현"을 해소한다.
+
+### 선택
+- **sLM leg = `ollama-1b`(`llama3.2:1b`)** 추가. 답변 모델 2단(easy→1b, hard→`ollama-7b`). 이를 위해 `OllamaService`의 chat을 `OllamaChatClient`로 **추출·모델 파라미터화**하고 7b·1b 두 빈으로 분리(`OllamaService`는 임베딩 전용).
+- **분류기 = 별도 모델 `qwen2.5:3b`**(답변 모델과 분리). 처음엔 1b로 분류했으나 짧은 사실 질문(예: "Ollama base-url은?")도 HARD로 **오분류·불안정** → 3b로 교체하니 안정. 분류 **실패 시 HARD 폴백**(품질 우선, 안전한 기본값).
+- **분류 입력은 증강 프롬프트가 아니라 원문 질문**. 초기엔 RAG context가 붙은 프롬프트를 분류기에 넣어 길이·복잡도 때문에 전부 HARD로 분류되는 버그가 있었다 → `ChatModelClient.chat(prompt, provider, routingText)` 오버로드로 **분류용 텍스트(routingText=원문 질문)** 를 프롬프트와 분리.
+- **`routing-strategy` 토글**(`fixed`|`difficulty`, 기본 `fixed`) + `llm.difficulty.easy-provider`/`hard-provider` 매핑. 요청 `provider` 지정은 항상 최우선(전략 무시).
+- **관측:** `QueryTelemetry`에 `difficulty`(EASY/HARD/-) 추가 → 요청 로그 한 줄에 분류 결과 기록.
+- **Ollama 호출 안정화:** `num_predict=1024`(무한 생성 방지), `num_ctx=4096`(1b가 기본 32K 컨텍스트로 로드되며 8GB GPU에서 스톨 → 4096 고정; RAG 프롬프트엔 충분), `ollamaRestClient` read-timeout 120s(서버 스톨 시 무한 대기 방지).
+
+### 결과 (2026-06, `num_ctx=4096`, 단일 8GB GPU / `eval/reports/compare-providers.md`)
+| provider | total | avgLatencyMs | grounded | 비고 |
+| --- | ---: | ---: | ---: | --- |
+| ollama-1b | 10/20 | 6,098 | 10/10 | 작은 모델 전량 (빠름, 품질↓·no-answer 미준수) |
+| ollama-7b | 19/20 | 57,631 | 7/10 | 큰 모델 전량 (느림, 품질↑) |
+| router(difficulty) | 17/20 | 64,923 | 8/10 | 난이도 분기 (EASY 4문항→1b, HARD 6문항→7b) |
+
+- **분류는 정확히 동작:** 사실 단답형 4문항은 EASY→1b, 비교·요약·no-answer 6문항은 HARD→7b로 분기(telemetry `difficulty` 확인). 품질은 1b(10) < **router(17)** < 7b(19)로, 어려운 질문을 7b로 보내 7b에 근접한 점수를 **싼 경로를 섞고도** 유지.
+- **그러나 지연 이득은 없음:** router(64.9s) ≈ 7b(57.6s)로 오히려 약간 높다. 원인은 생성 속도가 아니라 **VRAM 경합**이다 — 단일 8GB GPU에 분류기(3b)+답변모델(1b/7b)이 동시 상주하지 못해, 모델 교체 시 활성 모델이 CPU로 일부 오프로드되며 7b 생성이 ~11s(§15, 7b 단독 상주)에서 ~55s로 느려진다. EASY→1b 문항도 직전 분류기·7b 잔류 때문에 1b 단독(6s)이 아니라 50s대가 나온 경우가 많다.
+- **결론(정직):** 본 코퍼스·하드웨어에서 난이도 라우팅은 **품질을 7b 근처로 유지**하지만 **지연·비용 이득은 없다**. 이득은 (a)모든 leg가 상주 가능한 충분한 VRAM, (b)룰 기반·상주형 경량 분류기, (c)원격/별도 분류 엔드포인트가 있을 때 실현된다. 따라서 **기본 전략은 `fixed` 유지**, `difficulty`는 옵트인(연구·환경별 튜닝용)으로 둔다.
+
+### 구현 위치
+- `llm/OllamaChatClient`(모델 파라미터화·`num_predict`/`num_ctx`), `service/OllamaService`(임베딩 전용화), `llm/DifficultyTier`·`llm/DifficultyClassifier`(3b 분류, 실패→HARD), `llm/RoutingChatModelClient`(`pickByStrategy`), `llm/ChatModelClient`(`chat(prompt,provider,routingText)`).
+- `config/RoutingProperties`(`routingStrategy`·`Difficulty`), `config/OllamaProperties`(`smallChatModel`·`classifierModel`), `config/AppConfig`(`ollama7bChatClient`·`ollama1bChatClient` 빈, `ollamaRestClient` timeout), `resources/application.yml`(`routing-strategy`·`difficulty`·`small-chat-model`·`classifier-model`).
+- `observability/QueryTelemetry*`(`difficulty`), `eval/RagEvalRunner`(`router` 토큰 = 설정 전략으로 라우팅).
+
+### 한계
+- **지연 이득은 하드웨어 의존**(위 결론). 단일 소형 GPU에서는 다중 모델 경합이 지배적.
+- **분류기 호출이 매 질문 1회 추가 비용**(3b 생성). 분류 결과 캐싱·룰 기반 사전 분기 미적용.
+- 분류는 **2단(EASY/HARD)**·**모델 2개**만. 다단·N개 모델 일반화 미적용.
+- `difficulty` 전략은 **동기 `/api/chat`만**. 스트리밍은 fixed default 라우팅.

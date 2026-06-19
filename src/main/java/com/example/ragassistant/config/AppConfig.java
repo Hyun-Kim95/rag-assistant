@@ -1,5 +1,7 @@
 package com.example.ragassistant.config;
 
+import com.example.ragassistant.llm.ChatModelClient;
+import com.example.ragassistant.llm.OllamaChatClient;
 import com.example.ragassistant.parser.DocumentParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,8 +19,12 @@ public class AppConfig {
 
     @Bean
     RestClient ollamaRestClient(OllamaProperties properties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofSeconds(120));   // 무한 생성/응답 지연 backstop
         return RestClient.builder()
                 .baseUrl(properties.baseUrl())
+                .requestFactory(factory)
                 .build();
     }
 
@@ -45,7 +51,23 @@ public class AppConfig {
                 .requestFactory(factory)
                 .build();
     }
-    
+
+    // ollama-7b: 기본/강한 leg
+    @Bean
+    ChatModelClient ollama7bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
+                                       ObjectMapper objectMapper) {
+        return new OllamaChatClient(ollamaRestClient, objectMapper,
+                properties.chatModel(), "ollama-7b", properties.temperature());
+    }
+
+    // ollama-1b: 작은/빠른 leg + 난이도 분류기 재사용. 구체 타입 반환 → DifficultyClassifier가 @Qualifier로 주입.
+    @Bean
+    OllamaChatClient ollama1bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
+                                        ObjectMapper objectMapper) {
+        return new OllamaChatClient(ollamaRestClient, objectMapper,
+                properties.smallChatModel(), "ollama-1b", properties.temperature());
+    }
+
     @Bean
     DocumentParser documentParser() {
         return new DocumentParser();

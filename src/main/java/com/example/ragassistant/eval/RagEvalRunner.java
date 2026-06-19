@@ -81,13 +81,15 @@ public class RagEvalRunner implements ApplicationRunner {
     }
 
     private EvalReport runAndWrite(EvalMode mode, List<EvalQuestion> questions, String provider) throws IOException {
+        // "router" 토큰 = provider 미지정(null) → 설정된 routing-strategy(fixed|difficulty)로 라우팅.
+        String callProvider = "router".equalsIgnoreCase(provider) ? null : provider;
         List<EvalResult> results = new ArrayList<>();
         long totalLatencyMs = 0;
         log.info("RAG eval start: mode={}, provider={}, questions={}",
                 mode, provider == null ? "(default)" : provider, questions.size());
         for (EvalQuestion q : questions) {
             long t0 = System.nanoTime();
-            ChatResponse response = runOnce(mode, q.question(), provider);
+            ChatResponse response = runOnce(mode, q.question(), callProvider);
             long latencyMs = (System.nanoTime() - t0) / 1_000_000L;
             totalLatencyMs += latencyMs;
             EvalResult result = scorer.score(q, mode, response);

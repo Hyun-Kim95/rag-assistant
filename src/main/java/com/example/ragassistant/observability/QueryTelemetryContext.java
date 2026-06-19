@@ -80,6 +80,13 @@ public class QueryTelemetryContext {
         }
     }
 
+    public void recordDifficulty(String tier) {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.setDifficulty(tier);
+        }
+    }
+
     /**
      * 현재 요청에서 실제 응답한 provider 이름. 활성 컨텍스트 없으면 null.
      */
@@ -100,7 +107,7 @@ public class QueryTelemetryContext {
         try {
             log.info("query requestId={} hits={} topScore={} grounded={} noAnswer={} "
                             + "embedMs={} retrieveMs={} rerankMs={} genMs={} totalMs={} rerankFallback={}"
-                            + "provider={} fallbackUsed={}",
+                            + "provider={} fallbackUsed={} difficulty={}",
                     t.requestId(),
                     t.hitCount(),
                     t.topScore() == null ? "-" : String.format("%.4f", t.topScore()),
@@ -113,7 +120,8 @@ public class QueryTelemetryContext {
                     t.totalMs(),
                     t.rerankFallback() == null ? "-" : t.rerankFallback(),
                     t.provider() == null ? "-" : t.provider(),
-                    t.fallbackUsed());
+                    t.fallbackUsed(),
+                    t.difficulty() == null ? "-" : t.difficulty());
         } finally {
             holder.remove();
         }
