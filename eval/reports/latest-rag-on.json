@@ -1,7 +1,7 @@
 {
   "version" : "v2",
   "mode" : "RAG_ON",
-  "ranAt" : "2026-06-20T06:15:04.223060300Z",
+  "ranAt" : "2026-06-20T07:47:37.984279300Z",
   "totalScore" : 19,
   "maxTotalScore" : 20,
   "results" : [ {
@@ -9,7 +9,7 @@
     "category" : "A_FACT",
     "question" : "이 프로젝트의 기술 스택은?",
     "mode" : "RAG_ON",
-    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector\n\n`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：\n\n```korean\n- 스프링 부트\n- 올라마\n- PostgreSQL pgvector\n\nRAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술들을 사용하고 있습니다.\n```",
+    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "ARCHITECTURE.md",
@@ -40,7 +40,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 605,
       "snippet" : ". Docker/서비스 실행 및 base-url(http://localhost:11434)을 확인하세요.\"\n}\n```\n\nHTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 처리** 참고.\n\n## 6. DB 설계 (pgvector)\n\n### documents (migration SQL은 repo 미포함)\n| column |...",
-      "score" : 3.5281325E-4
+      "score" : 3.500686E-4
     }, {
       "documentName" : "README.md",
       "chunkId" : 578,
@@ -67,7 +67,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 604,
       "snippet" : "rieve·no-answer 판정은 스트림 시작 전 동기 처리 (hits empty → `done`만 no-answer)\n\n### Error Response 예시\n\n`ErrorResponse` 형식: `{\"error\":\"<코드>\",\"message\":\"<메시지>\"}`\n\n```json\n{\n  \"error\": \"OLLAMA_UNAVAILABLE\",\n  \"mess...",
-      "score" : 0.9284088
+      "score" : 0.9285385
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 667,
@@ -139,7 +139,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.682891
+      "score" : 0.68299675
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 647,
@@ -154,7 +154,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 592,
       "snippet" : "ry\n│   ├── DocumentRepository\n│   ├── ChunkRepository\n│   └── EmbeddingRepository\n├── llm\n│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)\n│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 ...",
-      "score" : 0.47450942
+      "score" : 0.4743268
     } ],
     "noAnswer" : false,
     "score" : 2,
@@ -181,7 +181,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 664,
       "snippet" : "pgvector cosine top-k (`EmbeddingRepository.searchSimilar`)\n- **lexical leg:** PostgreSQL `pg_trgm` `similarity()` (`ChunkRepository.searchLexical`)\n- **병합:** RRF(Reciprocal Rank Fusion), `k=60` (`Rrf...",
-      "score" : 0.0063143647
+      "score" : 0.006338922
     }, {
       "documentName" : "README.md",
       "chunkId" : 569,
@@ -201,7 +201,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 607,
       "snippet" : "-|---|\n| id | bigserial PK | |\n| document_id | bigint FK → documents **ON DELETE CASCADE** | |\n| chunk_index | int | |\n| content | text | chunk 본문 |\n\n### document_embeddings (수동 SQL)\n| column | type |...",
-      "score" : 0.0016809418
+      "score" : 0.0016743992
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 601,
@@ -223,7 +223,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 646,
       "snippet" : "# 4. Spring AI 사용 여부\n\n### 선택\n- RAG 파이프라인(chunking · retrieval · prompt · no-answer) **직접 구현**\n- Ollama 호출: `RestClient`로 HTTP 연동\n- **Spring AI 미사용**\n\n### 이유\n- chunking / retrieval / prompt / no-answer...",
-      "score" : 0.15584777
+      "score" : 0.15623358
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 648,
@@ -243,7 +243,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 649,
       "snippet" : "chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변...",
-      "score" : 6.922184E-5
+      "score" : 6.976471E-5
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 682,
@@ -285,7 +285,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 616,
       "snippet" : "→ 답을 못 찾을 때 (출구 1·2·3) → [Context] → [Question] → [Answer]\n```\n\n- **Context chunk 표기:** `[출처: {문서명}]` + 본문 (`formatHit`). chunkId·score는 LLM에 넘기지 않음.\n- **FAQ chunk:** `FaqCatalog` SSOT — 정책(hit 없을 때 `...",
-      "score" : 0.03429395
+      "score" : 0.034358688
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 681,
@@ -295,7 +295,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 603,
       "snippet" : "질문은 스트림 열기 전 **400 JSON** (`GlobalExceptionHandler`).\n\n| SSE event | data (JSON) | 설명 |\n|---|---|---|\n| `delta` | `{\"text\":\"...\"}` | LLM 토큰(청크) 단위 |\n| `done` | `{\"answer\":\"...\",\"sources\":[...],\"ground...",
-      "score" : 0.0042151595
+      "score" : 0.004198795
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 604,
@@ -310,7 +310,7 @@
       "documentName" : "README.md",
       "chunkId" : 570,
       "snippet" : "기본 `true`, 미기동 시 fallback)\n\n설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)\n\n## Demo\n\n문서 업로드 후 RAG 질의·출처·no-answer 동작 (~45초 분량).\n\n<img wi...",
-      "score" : 0.0021405893
+      "score" : 0.0021322616
     } ],
     "noAnswer" : false,
     "score" : 1,
@@ -347,7 +347,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 668,
       "snippet" : "url은?」— DECISIONS 1순위, `grounded: true` |\n| hybrid on 회귀 | 동일 질문 — 순위·답변 동일 (vector가 이미 충분) |\n| no-answer 회귀 | 「2025년 매출」— no-answer, `sources: []` |\n| lexical-stress | `nomic-embed-text` — vector 1위 ...",
-      "score" : 0.0023504829
+      "score" : 0.0023596608
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 663,
@@ -406,5 +406,5 @@
     "failReasons" : [ ]
   } ],
   "provider" : null,
-  "avgLatencyMs" : 68641
+  "avgLatencyMs" : 66992
 }

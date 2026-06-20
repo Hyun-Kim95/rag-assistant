@@ -14,7 +14,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.example.ragassistant.service.PromptBuilder.NO_ANSWER_MESSAGE;
 
@@ -28,6 +30,16 @@ public class RagService {
     private static final Pattern TRAILING_PROMPT_META_LINE = Pattern.compile(
             "(?i)^\\s*(\\[(?:Context|Question|Answer)]"
                     + "|Context에서|Context에|Context만).*$");
+
+    /**
+     * qwen2.5 계열이 한자 메타문장을 흘린 뒤 ```korean … ``` 코드펜스로 답을 재작성하는 패턴.
+     * 안쪽(정제된 한국어 답)만 취해 누출·중복을 제거한다.
+     */
+    private static final Pattern LANGUAGE_FENCE = Pattern.compile(
+            "(?is)```\\s*(?:korean|korea|한국어)\\s*\\n(.*?)\\n?```");
+
+    /** 한자(CJK Unified Ideographs) 1자 이상 — 한국어 답에는 등장하지 않아야 한다. */
+    private static final Pattern CJK_CHAR = Pattern.compile("[\\u4E00-\\u9FFF\\u3400-\\u4DBF]");
 
     private final Retriever retriever;
     private final PromptBuilder promptBuilder;
@@ -86,21 +98,52 @@ public class RagService {
     }
 
     /**
-     * LLM이 프롬프트의 no-answer 규칙을 오해해 붙이는 잔여 태그 제거.
+     * LLM 답변 정제: no-answer 잔여 태그, 한자 누출(```korean 재작성·중국어 메타 줄),
+     * 프롬프트 라벨·Context 메타 줄을 제거한다.
      */
-    private String sanitizeLlmAnswer(String answer) {
+    static String sanitizeLlmAnswer(String answer) {
         if (!StringUtils.hasText(answer)) {
             return answer;
         }
         String normalized = answer.strip()
                 .replaceAll("(?i)\\[no-answer]\\s*$", "")
                 .strip();
+        normalized = stripChineseLeak(normalized);
         String stripped = stripTrailingPromptMetaLines(normalized);
         return stripLeadingAnswerLabel(stripped);
     }
 
+    /**
+     * qwen2.5 한자 누출 정제: 중국어 메타 줄 + ```korean 재작성 블록(중복 답)을 제거하고
+     * 펜스 밖의 1차 답(영문 고유명사 보존)을 유지한다. 밖에 내용이 없으면 펜스 안쪽을 취한다.
+     */
+    private static String stripChineseLeak(String answer) {
+        String withoutCjk = stripCjkLines(answer);
+        String withoutFence = LANGUAGE_FENCE.matcher(withoutCjk).replaceAll("").strip();
+        if (StringUtils.hasText(withoutFence)) {
+            return withoutFence;
+        }
+        Matcher m = LANGUAGE_FENCE.matcher(withoutCjk);
+        if (m.find()) {
+            String inner = m.group(1).strip();
+            if (StringUtils.hasText(inner)) {
+                return inner;
+            }
+        }
+        return withoutCjk;
+    }
+
+    /** 한자가 섞인 줄(중국어 누출)을 제거한다. 전부 제거되면 과삭제 방지로 원본을 유지한다. */
+    private static String stripCjkLines(String answer) {
+        String result = answer.lines()
+                .filter(line -> !CJK_CHAR.matcher(line).find())
+                .collect(Collectors.joining("\n"))
+                .strip();
+        return result.isEmpty() ? answer : result;
+    }
+
     /** LLM이 붙이는 프롬프트 라벨·Context 메타 요약 등 마지막 줄 제거 */
-    private String stripTrailingPromptMetaLines(String answer) {
+    private static String stripTrailingPromptMetaLines(String answer) {
         String result = answer;
         while (StringUtils.hasText(result)) {
             int lastNewline = result.lastIndexOf('\n');
@@ -114,7 +157,7 @@ public class RagService {
     }
 
     /** LLM이 답 앞에 붙이는 [Answer] 라벨 제거 */
-    private String stripLeadingAnswerLabel(String answer) {
+    private static String stripLeadingAnswerLabel(String answer) {
         return answer.replaceFirst("(?is)^\\s*\\[Answer]\\s*", "").strip();
     }
 

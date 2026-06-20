@@ -4,8 +4,8 @@
 |---|---|
 | version | v2 |
 | mode | RAG_ON |
-| ranAt | 2026-06-20 15:15 |
-| avgLatencyMs | 68641 |
+| ranAt | 2026-06-20 16:47 |
+| avgLatencyMs | 66992 |
 | total | **19 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |
@@ -31,16 +31,6 @@
 - Spring Boot
 - Ollama
 - PostgreSQL pgvector
-
-`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：
-
-```korean
-- 스프링 부트
-- 올라마
-- PostgreSQL pgvector
-
-RAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술들을 사용하고 있습니다.
-```
 ```
 
 ### 2. Ollama base-url은?

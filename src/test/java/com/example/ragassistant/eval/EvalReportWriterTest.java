@@ -107,6 +107,6 @@ class EvalReportWriterTest {
                 mode, PromptBuilder.NO_ANSWER_MESSAGE,
                 false, List.of(), true, 2, 2, List.of()
         );
-        return new EvalReport("v2", mode, ranAt, 2, 2, List.of(one));
+        return new EvalReport("v2", mode, ranAt, 2, 2, List.of(one), null, 0L);
     }
 }
