@@ -278,7 +278,6 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 ### 배경 / 목표
 - chat 추론을 **2개 이상 provider로 라우팅하고 실패 시 폴백**하며, 그 결과를 헬스·관측·평가에 연결해 "운영 가능한 Model Router"로 만든다.
 - §4(LLM 호출 경계)에서 만들어 둔 `llm.ChatModelClient` seam 위에 **소비자(`RagService`) 코드 변경 없이** 라우터·2nd provider만 얹는다.
-- 설계·계약 상세: [`MODEL_ROUTER_PLAN.md`](MODEL_ROUTER_PLAN.md).
 
 ### 선택
 - **2nd provider = OpenAI 호환 클라이언트 1개**(`OpenAiCompatChatClient`, `/v1/chat/completions`). base-url 교체만으로 SaaS(Groq·OpenAI·Gemini 호환 등)와 self-hosted(vLLM 등)를 모두 커버 → "SaaS & self-hosted 동시 연동"을 한 구현으로 충족.
