@@ -1,7 +1,7 @@
 {
   "version" : "v2",
   "mode" : "RAG_ON",
-  "ranAt" : "2026-06-19T08:33:20.946090200Z",
+  "ranAt" : "2026-06-20T06:15:04.223060300Z",
   "totalScore" : 19,
   "maxTotalScore" : 20,
   "results" : [ {
@@ -9,7 +9,7 @@
     "category" : "A_FACT",
     "question" : "이 프로젝트의 기술 스택은?",
     "mode" : "RAG_ON",
-    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector\n\n`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에서 확인할 수 있습니다.",
+    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector\n\n`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：\n\n```korean\n- 스프링 부트\n- 올라마\n- PostgreSQL pgvector\n\nRAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술들을 사용하고 있습니다.\n```",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "ARCHITECTURE.md",
@@ -20,7 +20,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 659,
       "snippet" : "리·문서 정책 (2026-06)\n\n### Ollama 오류\n- `OllamaService.postForMap()`: chat/embed 공통 HTTP 호출\n- 연결 실패 (`ResourceAccessException`) → 503 `OLLAMA_UNAVAILABLE`\n- HTTP 4xx/5xx·응답 body/형식 오류 → 502 `OLLAMA_RESPONS...",
-      "score" : 7.321813E-4
+      "score" : 7.2932884E-4
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 588,
@@ -40,7 +40,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 605,
       "snippet" : ". Docker/서비스 실행 및 base-url(http://localhost:11434)을 확인하세요.\"\n}\n```\n\nHTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 처리** 참고.\n\n## 6. DB 설계 (pgvector)\n\n### documents (migration SQL은 repo 미포함)\n| column |...",
-      "score" : 3.500686E-4
+      "score" : 3.5281325E-4
     }, {
       "documentName" : "README.md",
       "chunkId" : 578,
@@ -67,7 +67,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 604,
       "snippet" : "rieve·no-answer 판정은 스트림 시작 전 동기 처리 (hits empty → `done`만 no-answer)\n\n### Error Response 예시\n\n`ErrorResponse` 형식: `{\"error\":\"<코드>\",\"message\":\"<메시지>\"}`\n\n```json\n{\n  \"error\": \"OLLAMA_UNAVAILABLE\",\n  \"mess...",
-      "score" : 0.9285385
+      "score" : 0.9284088
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 667,
@@ -77,7 +77,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 640,
       "snippet" : "ection.isValid(2)` | core |\n| `ollama` | `GET {base}/api/tags` 2xx | core |\n| `reranker` | `GET {base}/health` 2xx | rerank off면 `DISABLED`(상태 무관) |\n\n```json\n{ \"status\": \"DEGRADED\", \"service\": \"rag-as...",
-      "score" : 0.23686911
+      "score" : 0.23704566
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 639,
@@ -97,7 +97,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 621,
       "snippet" : "Service` sanitize와 정합).\n\n### LLM 응답 후처리 (`RagService`)\n\n- `sanitizeLlmAnswer`: `[Answer]`·`[no-answer]`·마지막 줄 `Context에서/Context에/Context만` 메타 잔여물 제거\n- `isGrounded`: `NO_ANSWER_MESSAGE`와 동일 → `grounde...",
-      "score" : 0.015967654
+      "score" : 0.016029147
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 631,
@@ -119,7 +119,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 643,
       "snippet" : "lama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base URL: `http://localhost:11434`\n- Chat model: `qwen2.5:7b`\n- Embedding model: `nomic-embed-text`\n\n### 이유\n- Windows 로컬 개발에 적합\n- OpenAI-compatible API...",
-      "score" : 0.9692078
+      "score" : 0.96926606
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 642,
@@ -139,7 +139,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.68299675
+      "score" : 0.682891
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 647,
@@ -154,7 +154,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 592,
       "snippet" : "ry\n│   ├── DocumentRepository\n│   ├── ChunkRepository\n│   └── EmbeddingRepository\n├── llm\n│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)\n│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 ...",
-      "score" : 0.4743268
+      "score" : 0.47450942
     } ],
     "noAnswer" : false,
     "score" : 2,
@@ -217,7 +217,7 @@
     "category" : "B_POLICY",
     "question" : "Spring AI를 전면 도입하지 않은 이유?",
     "mode" : "RAG_ON",
-    "answer" : "Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위해서입니다.",
+    "answer" : "Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위함입니다.",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "DECISIONS.md",
@@ -285,7 +285,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 616,
       "snippet" : "→ 답을 못 찾을 때 (출구 1·2·3) → [Context] → [Question] → [Answer]\n```\n\n- **Context chunk 표기:** `[출처: {문서명}]` + 본문 (`formatHit`). chunkId·score는 LLM에 넘기지 않음.\n- **FAQ chunk:** `FaqCatalog` SSOT — 정책(hit 없을 때 `...",
-      "score" : 0.034358688
+      "score" : 0.03429395
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 681,
@@ -310,7 +310,7 @@
       "documentName" : "README.md",
       "chunkId" : 570,
       "snippet" : "기본 `true`, 미기동 시 fallback)\n\n설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)\n\n## Demo\n\n문서 업로드 후 RAG 질의·출처·no-answer 동작 (~45초 분량).\n\n<img wi...",
-      "score" : 0.0021322616
+      "score" : 0.0021405893
     } ],
     "noAnswer" : false,
     "score" : 1,
@@ -327,12 +327,12 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 650,
       "snippet" : "snippet** 포함\n- API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일\n\n### 초기 UI\n- 먼저 API 완성\n- 이후 간단한 업로드 + 채팅 UI 추가\n\n## 6. Chunking 정책 (2026-06)\n\n### 선택\n- 초기: `chunk-size: 700`, `chunk-overlap: 100...",
-      "score" : 0.9811669
+      "score" : 0.9811307
     }, {
       "documentName" : "__SYSTEM_FAQ.md",
       "chunkId" : 497,
       "snippet" : "[설정] RAG chunk 및 retrieval 파라미터\nchunk-size: 450, chunk-overlap: 150, top-k: 10, min-score: 0.2.\nembedding dimension: 768. 설정 파일: application.yml의 rag 섹션.",
-      "score" : 0.98076576
+      "score" : 0.98080254
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 651,
@@ -406,5 +406,5 @@
     "failReasons" : [ ]
   } ],
   "provider" : null,
-  "avgLatencyMs" : 11389
+  "avgLatencyMs" : 68641
 }
