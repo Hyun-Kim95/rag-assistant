@@ -21,7 +21,8 @@ public class AppConfig {
     RestClient ollamaRestClient(OllamaProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
-        factory.setReadTimeout(Duration.ofSeconds(120));   // 무한 생성/응답 지연 backstop
+        // 무한 생성/응답 지연 backstop. 기본 120s, ollama.timeout-ms로 상향 가능(느린 로컬 모델 콜드 로드 대비)
+        factory.setReadTimeout(Duration.ofMillis(properties.readTimeoutMsOrDefault()));
         return RestClient.builder()
                 .baseUrl(properties.baseUrl())
                 .requestFactory(factory)

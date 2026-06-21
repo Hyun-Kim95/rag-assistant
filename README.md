@@ -65,7 +65,23 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON"
 # RAG off (LLM만, 대조군)
 gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_OFF"
+# provider 비교 (한 번에 실행 → compare-providers.md 생성)
+gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag.eval.providers=ollama-7b,ollama-1b,groq"
 ```
+
+> **느린 로컬 모델 벤치마크:** 큰 모델(예: `qwen2.5:7b`)은 콜드 로드 시 기본 read timeout(120s)을 넘길 수 있다. `--ollama.timeout-ms=300000`로 상향하거나 측정 전 `ollama run qwen2.5:7b "hi"`로 워밍업한다. 한 provider가 timeout으로 실패해도 나머지 provider는 끝까지 실행되고(실패 문항은 0점 기록), 성공한 결과가 2개 이상이면 `compare-providers.md`가 생성된다.
+>
+> **측정 타당성:** `--rag.eval.providers`로 provider를 강제하면 해당 leg만 호출하고 **fallback하지 않는다**(strict). 즉 비교표의 각 행은 "순수 그 provider"의 결과이며, groq 호출이 실패해도 로컬 모델로 조용히 폴백되어 수치가 섞이지 않는다(실패 시 그 provider의 실패로 0점 기록). 운영 API(`/api/chat`)의 `provider` 지정은 기존대로 "우선 + 폴백"을 유지한다.
+>
+> **무료 SaaS rate-limit 회피(throttle):** 무료 티어(예: Groq `llama-3.1-8b-instant`는 TPM 6K)는 RAG 프롬프트(source 다수)가 토큰이 커서 10문항을 연속으로 던지면 분당 토큰 한도에 걸려 `429`가 난다. `--rag.eval.delay-ms`로 문항 사이 간격을 주면 분당 한도 아래로 맞춰 완주할 수 있다. 간격은 측정 구간 밖이라 `avgLatencyMs`에는 포함되지 않는다.
+>
+> - `--rag.eval.delay-ms=30000` — 모든 provider 문항 사이 30초.
+> - `--rag.eval.throttle-providers=groq` — 간격을 특정 provider(콤마 구분)에만 적용. 생략 시 전체 적용. 로컬 leg(ollama)는 rate-limit이 없으므로 보통 groq만 지정한다.
+>
+> ```bash
+> # 7b·1b는 풀스피드, groq만 30초 간격으로 한 번에 비교
+> gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag.eval.providers=ollama-7b,ollama-1b,groq --rag.eval.delay-ms=30000 --rag.eval.throttle-providers=groq"
+> ```
 
 산출물 (`eval/reports/`):
 

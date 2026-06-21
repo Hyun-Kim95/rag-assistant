@@ -67,6 +67,15 @@ public class RagService {
      * @param provider (선택) 우선 사용할 chat provider. null이면 default 라우팅.
      */
     public ChatResponse chat(String question, String provider) {
+        return chat(question, provider, false);
+    }
+
+    /**
+     * @param provider       (선택) 우선 사용할 chat provider. null이면 default 라우팅.
+     * @param strictProvider true면 지정 provider만 호출하고 fallback하지 않는다(벤치마크 측정 타당성용).
+     *                       provider 실패 시 다른 leg로 폴백하지 않고 예외를 전파한다.
+     */
+    public ChatResponse chat(String question, String provider, boolean strictProvider) {
         if (!StringUtils.hasText(question)) {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
@@ -80,7 +89,9 @@ public class RagService {
             }
             String prompt = promptBuilder.build(hits, question);
             long tGen = System.nanoTime();
-            String answer = sanitizeLlmAnswer(ollamaService.chat(prompt, provider, question));
+            String answer = sanitizeLlmAnswer(strictProvider
+                    ? ollamaService.chatStrict(prompt, provider)
+                    : ollamaService.chat(prompt, provider, question));
             telemetry.recordGenerationMs(msSince(tGen));
             boolean grounded = isGrounded(answer);
             telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,

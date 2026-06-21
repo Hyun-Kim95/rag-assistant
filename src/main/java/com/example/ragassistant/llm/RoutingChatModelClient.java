@@ -100,6 +100,25 @@ public class RoutingChatModelClient implements ChatModelClient {
     }
 
     @Override
+    public String chatStrict(String prompt, String provider) {
+        // provider 미지정이면 strict 의미가 없으므로 일반 라우팅으로 위임.
+        if (!StringUtils.hasText(provider)) {
+            return chat(prompt);
+        }
+        ChatModelClient leg = byName.get(provider);
+        if (leg == null) {
+            throw new UnknownProviderException("알 수 없는 provider: " + provider);
+        }
+        if (!leg.available()) {
+            throw new AllProvidersUnavailableException("provider 사용 불가(strict, fallback 없음): " + provider);
+        }
+        // 폴백 없음 — 실패하면 예외 그대로 전파(측정 시 해당 provider 실패로 기록되도록).
+        String answer = leg.chat(prompt);
+        telemetry.recordProvider(provider);
+        return answer;
+    }
+
+    @Override
     public String streamChat(String prompt, Consumer<String> onDelta) {
         // 전략·폴백 없음. fixed 체인의 첫 가용 provider 1개만.
         for (String n : chain(null, null)) {

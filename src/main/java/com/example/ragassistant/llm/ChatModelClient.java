@@ -40,6 +40,16 @@ public interface ChatModelClient {
     }
 
     /**
+     * 지정 provider만 호출하고 fallback하지 않는 chat(벤치마크 측정 타당성용).
+     * - 해당 provider가 실패하면 예외를 그대로 전파(다른 leg로 폴백하지 않음).
+     * - 단일 provider 구현체는 provider 힌트를 무시하고 자기 자신을 호출한다(기본 구현).
+     * RoutingChatModelClient만 override 해 체인/폴백 없이 단일 leg를 호출한다.
+     */
+    default String chatStrict(String prompt, String provider) {
+        return chat(prompt, provider);
+    }
+
+    /**
      * 라우팅·헬스용 provider 식별자. 예: "ollama-7b", "groq".
      * RoutingChatModelClient 가 byName 맵 키와 fallback-order 매칭에 사용한다.
      */

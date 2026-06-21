@@ -30,6 +30,7 @@ ollama:
   classifier-model: qwen2.5:3b
   embedding-model: nomic-embed-text
   temperature: 0
+  timeout-ms: 120000        # chat/embedding read timeout. 느린 로컬 모델 벤치마크 시 상향(예: --ollama.timeout-ms=300000)
 
 rag:
   chunk-size: 450
@@ -38,7 +39,7 @@ rag:
   min-score: 0.2
   embedding-dimension: 768
   # --- hybrid search ---
-  hybrid-enabled: true    # true 시 pg_trgm + RRF hybrid (vector-only 회귀와 다름)
+  hybrid-enabled: true      # true 시 pg_trgm + RRF hybrid (vector-only 회귀와 다름)
   lexical-top-k: 10         # lexical leg 후보 수 (보통 vector top-k와 동일)
   lexical-min-score: 0.1    # pg_trgm similarity 하한 (0~1)
   rrf-k: 60                 # RRF 상수, 논문/Elasticsearch 관례값

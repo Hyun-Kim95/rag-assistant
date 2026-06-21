@@ -5,8 +5,8 @@
 | version | v2 |
 | mode | RAG_ON |
 | provider | ollama-1b |
-| ranAt | 2026-06-19 23:52 |
-| avgLatencyMs | 6098 |
+| ranAt | 2026-06-21 21:57 |
+| avgLatencyMs | 7407 |
 | total | **10 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |
@@ -366,80 +366,41 @@ chunk-size는 450, chunk-overlap는 150로 설정되어 있다.
 
 문서에는 다음과 같은 정보가 있습니다.
 
-*   `RAGEval_v1.md`: RAG(eval)评估기능
-*   `RAGEval_v2.md`: RAG(eval)评估기능
-*   `RAGEval_v3.md`: RAG(eval)评估기능
-*   `RAGEval_v4.md`: RAG(eval)评估기능
 
-`RAGEval_v1.md`, `RAGEval_v2.md`, `RAGEval_v3.md`, `RAGEval_v4.md`는 RAG(eval)评估기능입니다.
 
-`RAGEval_v1.1.md`, `RAGEval_v2.1.md`, `RAGEval_v3.1.md`, `RAGEval_v4.1.md`는 RAG(eval)评估기능의 버전입니다.
 
-`RAGEval_v1.0.md`: RAG(eval)评估기능
 
-`RAGEval_v1.2.md`: RAG(eval)评估기능
 
-`RAGEval_v1.3.md`: RAG(eval)评估기능
 
-`RAGEval_v1.4.md`: RAG(eval)评估기능
 
-`RAGEval_v1.5.md`: RAG(eval)评估기능
 
-`RAGEval_v1.6.md`: RAG(eval)评估기능
 
-`RAGEval_v1.7.md`: RAG(eval)评估기능
 
-`RAGEval_v1.8.md`: RAG(eval)评估기능
 
-`RAGEval_v1.9.md`: RAG(eval)评估기능
 
-`RAGEval_v1.10.md`: RAG(eval)评估기능
 
-`RAGEval_v1.11.md`: RAG(eval)评估기능
 
-`RAGEval_v1.12.md`: RAG(eval)评估기능
 
-`RAGEval_v1.13.md`: RAG(eval)评估기능
 
-`RAGEval_v1.14.md`: RAG(eval)评估기능
 
-`RAGEval_v1.15.md`: RAG(eval)评估기능
 
-`RAGEval_v1.16.md`: RAG(eval)评估기능
 
-`RAGEval_v1.17.md`: RAG(eval)评估기능
 
-`RAGEval_v1.18.md`: RAG(eval)评估기능
 
-`RAGEval_v1.19.md`: RAG(eval)评估기능
 
-`RAGEval_v1.20.md`: RAG(eval)评估기능
 
-`RAGEval_v1.21.md`: RAG(eval)评估기능
 
-`RAGEval_v1.22.md`: RAG(eval)评估기능
 
-`RAGEval_v1.23.md`: RAG(eval)评估기능
 
-`RAGEval_v1.24.md`: RAG(eval)评估기능
 
-`RAGEval_v1.25.md`: RAG(eval)评估기능
 
-`RAGEval_v1.26.md`: RAG(eval)评估기능
 
-`RAGEval_v1.27.md`: RAG(eval)评估기능
 
-`RAGEval_v1.28.md`: RAG(eval)评估기능
 
-`RAGEval_v1.29.md`: RAG(eval)评估기능
 
-`RAGEval_v1.30.md`: RAG(eval)评估기능
 
-`RAGEval_v1.31.md`: RAG(eval)评估기능
 
-`RAGEval_v1.32.md`: RAG(eval)评估기능
 
-`RAGEval_v1.33.md`: RAG(eval)评估기능
 
 `RAG
 ```

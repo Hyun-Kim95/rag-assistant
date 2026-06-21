@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -78,10 +79,14 @@ public class OllamaChatClient implements ChatModelClient {
             }
             return result;
         } catch (ResourceAccessException ex) {
-            throw new OllamaUnavailableException("Ollama에 연결할 수 없습니다. model=" + model, ex);
+            // 연결 거부·read timeout 등 I/O 단계 실패
+            throw new OllamaUnavailableException("Ollama에 연결할 수 없습니다(연결/타임아웃). model=" + model, ex);
         } catch (HttpStatusCodeException ex) {
             throw new OllamaResponseException(
                     "Ollama HTTP 오류: " + ex.getStatusCode().value() + " uri=" + uri + " model=" + model, ex);
+        } catch (RestClientException ex) {
+            // 응답 추출 단계에서 발생한 timeout 등(헤더/본문 파싱 중 SocketTimeoutException)도 "닿을 수 없음"으로 분류 → 라우터 폴백 대상
+            throw new OllamaUnavailableException("Ollama 응답 처리 실패(타임아웃/추출 오류). model=" + model, ex);
         }
     }
 

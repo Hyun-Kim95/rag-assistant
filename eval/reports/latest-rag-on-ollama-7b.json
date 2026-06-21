@@ -1,7 +1,7 @@
 {
   "version" : "v2",
   "mode" : "RAG_ON",
-  "ranAt" : "2026-06-19T15:02:34.314671900Z",
+  "ranAt" : "2026-06-21T12:56:17.003820100Z",
   "totalScore" : 19,
   "maxTotalScore" : 20,
   "results" : [ {
@@ -9,7 +9,7 @@
     "category" : "A_FACT",
     "question" : "이 프로젝트의 기술 스택은?",
     "mode" : "RAG_ON",
-    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector\n\n`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：\n\n```korean\n- 스프링 부트\n- 올라마\n- PostgreSQL pgvector\n\nRAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술 스택을 사용하고 있습니다.\n```",
+    "answer" : "- Spring Boot\n- Ollama\n- PostgreSQL pgvector",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "ARCHITECTURE.md",
@@ -77,12 +77,12 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 640,
       "snippet" : "ection.isValid(2)` | core |\n| `ollama` | `GET {base}/api/tags` 2xx | core |\n| `reranker` | `GET {base}/health` 2xx | rerank off면 `DISABLED`(상태 무관) |\n\n```json\n{ \"status\": \"DEGRADED\", \"service\": \"rag-as...",
-      "score" : 0.23704566
+      "score" : 0.23686911
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 639,
       "snippet" : "e`는 TEI 다운 시 degraded 동작을 그대로 드러낸다(§14 DECISIONS의 fallback과 정합).\n\n### Health 심화 (`GET /api/health`)\n\n`HealthService`가 의존성 readiness를 짧은 타임아웃으로 점검한다.\n\n| 의존성 | 점검 | 비고 |\n|---|---|---|\n| `database` | `Co...",
-      "score" : 0.1169656
+      "score" : 0.11656274
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 605,
@@ -129,32 +129,32 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 610,
       "snippet" : "`application.yml`\n\n```yaml\nollama:\n  base-url: http://localhost:11434\n  chat-model: qwen2.5:7b\n  embedding-model: nomic-embed-text\n  temperature: 0\n\nrag:\n  chunk-size: 450\n  chunk-overlap: 150\n  top-k...",
-      "score" : 0.7036513
+      "score" : 0.7043636
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 648,
       "snippet" : "- 구현체는 **Ollama 단일**(`OllamaService implements ChatModelClient, EmbeddingModelClient`) — 기존 \"외부 LLM API 없이 로컬 실행\"(§2) 결정 유지. SaaS·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시...",
-      "score" : 0.6875251
+      "score" : 0.6874202
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.682891
+      "score" : 0.68299675
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 647,
       "snippet" : "er 정책 변경 시 수정 지점이 명확함\n\n### LLM 호출 경계 (2026-06)\n- Ollama 호출을 `llm.ChatModelClient`(chat·streamChat)·`llm.EmbeddingModelClient`(embed) **인터페이스 뒤로 분리**. 소비자(`RagService`·`EmbeddingService`·`RagEvalRunner...",
-      "score" : 0.66006285
+      "score" : 0.66050094
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 649,
       "snippet" : "chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변...",
-      "score" : 0.59801877
+      "score" : 0.5980775
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 592,
       "snippet" : "ry\n│   ├── DocumentRepository\n│   ├── ChunkRepository\n│   └── EmbeddingRepository\n├── llm\n│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)\n│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 ...",
-      "score" : 0.47423553
+      "score" : 0.4743268
     } ],
     "noAnswer" : false,
     "score" : 2,
@@ -176,12 +176,12 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 644,
       "snippet" : "API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector**...",
-      "score" : 0.6575384
+      "score" : 0.6578682
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 664,
       "snippet" : "pgvector cosine top-k (`EmbeddingRepository.searchSimilar`)\n- **lexical leg:** PostgreSQL `pg_trgm` `similarity()` (`ChunkRepository.searchLexical`)\n- **병합:** RRF(Reciprocal Rank Fusion), `k=60` (`Rrf...",
-      "score" : 0.0063143647
+      "score" : 0.006338922
     }, {
       "documentName" : "README.md",
       "chunkId" : 569,
@@ -217,7 +217,7 @@
     "category" : "B_POLICY",
     "question" : "Spring AI를 전면 도입하지 않은 이유?",
     "mode" : "RAG_ON",
-    "answer" : "Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위해서입니다.",
+    "answer" : "Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위함입니다.",
     "grounded" : true,
     "sources" : [ {
       "documentName" : "DECISIONS.md",
@@ -243,7 +243,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 649,
       "snippet" : "chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변...",
-      "score" : 6.922184E-5
+      "score" : 6.976471E-5
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 682,
@@ -295,7 +295,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 603,
       "snippet" : "질문은 스트림 열기 전 **400 JSON** (`GlobalExceptionHandler`).\n\n| SSE event | data (JSON) | 설명 |\n|---|---|---|\n| `delta` | `{\"text\":\"...\"}` | LLM 토큰(청크) 단위 |\n| `done` | `{\"answer\":\"...\",\"sources\":[...],\"ground...",
-      "score" : 0.0042151595
+      "score" : 0.004198795
     }, {
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 604,
@@ -305,7 +305,7 @@
       "documentName" : "ARCHITECTURE.md",
       "chunkId" : 636,
       "snippet" : "ery requestId=ab12cd34 hits=8 topScore=0.8312 grounded=true noAnswer=- embedMs=42 retrieveMs=15 rerankMs=120 genMs=2100 totalMs=2290 rerankFallback=false\n```\n\n| 필드 | 의미 | 기록 위치 |\n|---|---|---|\n| `requ...",
-      "score" : 0.003692853
+      "score" : 0.0036642202
     }, {
       "documentName" : "README.md",
       "chunkId" : 570,
@@ -327,7 +327,7 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 650,
       "snippet" : "snippet** 포함\n- API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일\n\n### 초기 UI\n- 먼저 API 완성\n- 이후 간단한 업로드 + 채팅 UI 추가\n\n## 6. Chunking 정책 (2026-06)\n\n### 선택\n- 초기: `chunk-size: 700`, `chunk-overlap: 100...",
-      "score" : 0.9811669
+      "score" : 0.9811307
     }, {
       "documentName" : "__SYSTEM_FAQ.md",
       "chunkId" : 497,
@@ -337,17 +337,17 @@
       "documentName" : "DECISIONS.md",
       "chunkId" : 651,
       "snippet" : "형·긴 위키에서 retrieval recall 개선 시도\n- 텍스트 정규화: `\\r\\n` → `\\n` 후 고정 길이 분할, overlap으로 문맥 단절 완화\n- chunk metadata: `documentId`, `documentName`, `chunkIndex`\n\n### 구현\n- `Chunker` → `VectorStoreService` 업로드 시 DB...",
-      "score" : 0.111627996
+      "score" : 0.1112412
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 653,
       "snippet" : "JDBC: `?::vector` cast + float[] → `'[...]'` 문자열 리터럴\n- 업로드 트랜잭션: `DocumentService.upload` + `VectorStoreService.indexDocument` (동일 `@Transactional`)\n\n### 테이블\n- `document_chunks`: chunk 원문\n- `document_...",
-      "score" : 0.0027362213
+      "score" : 0.0027469008
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 668,
       "snippet" : "url은?」— DECISIONS 1순위, `grounded: true` |\n| hybrid on 회귀 | 동일 질문 — 순위·답변 동일 (vector가 이미 충분) |\n| no-answer 회귀 | 「2025년 매출」— no-answer, `sources: []` |\n| lexical-stress | `nomic-embed-text` — vector 1위 ...",
-      "score" : 0.0023504829
+      "score" : 0.0023596608
     }, {
       "documentName" : "DECISIONS.md",
       "chunkId" : 663,
@@ -406,5 +406,5 @@
     "failReasons" : [ ]
   } ],
   "provider" : "ollama-7b",
-  "avgLatencyMs" : 57631
+  "avgLatencyMs" : 61298
 }

@@ -5,8 +5,8 @@
 | version | v2 |
 | mode | RAG_ON |
 | provider | ollama-7b |
-| ranAt | 2026-06-20 00:02 |
-| avgLatencyMs | 57631 |
+| ranAt | 2026-06-21 21:56 |
+| avgLatencyMs | 61298 |
 | total | **19 / 20** |
 
 | # | category | score | grounded | sources | noAnswer |
@@ -32,16 +32,6 @@
 - Spring Boot
 - Ollama
 - PostgreSQL pgvector
-
-`RAG EVAL_v1.md`, `RAG_EVAL_v1.1.md`, `RAG_EVAL_v2.md` 문서에 따르면, 이 프로젝트는上述内容是中文，需要翻译成韩语并按照指令格式回答。以下是翻译后的答案：
-
-```korean
-- 스프링 부트
-- 올라마
-- PostgreSQL pgvector
-
-RAG EVAL_v1.md, RAG_EVAL_v1.1.md, RAG_EVAL_v2.md 문서에 따르면, 이 프로젝트는 위 기술 스택을 사용하고 있습니다.
-```
 ```
 
 ### 2. Ollama base-url은?
@@ -74,7 +64,7 @@ Ollama base-url은 `http://localhost:11434`입니다.
 **score:** 2/2
 
 ```
-Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위해서입니다.
+Spring AI를 전면 도입하지 않은 이유는 chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어하기 위함입니다. 또한, Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확해야 함으로써 관리의 용이성을 높이기 위함입니다.
 ```
 
 ### 6. 검색 hit가 없을 때 앱은 어떻게 동작하나?
