@@ -66,6 +66,11 @@ llm:
     model: llama-3.1-8b-instant
     timeout-ms: 8000
 
+agent:
+  max-steps: 5
+  timeout-ms: 180000
+  provider-order: [groq, ollama]      # Groq 우선, 실패/비활성 시 ollama 폴백
+
 logging:
   level:
     com.example.ragassistant: INFO

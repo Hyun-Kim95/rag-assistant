@@ -2,6 +2,7 @@ package com.example.ragassistant.config;
 
 import com.example.ragassistant.llm.ChatModelClient;
 import com.example.ragassistant.llm.OllamaChatClient;
+import com.example.ragassistant.llm.agent.OllamaAgentClient;
 import com.example.ragassistant.parser.DocumentParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -14,7 +15,7 @@ import java.time.Duration;
 
 @Configuration
 @EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class,
-        RoutingProperties.class, OpenAiCompatProperties.class})
+        RoutingProperties.class, OpenAiCompatProperties.class, AgentProperties.class})
 public class AppConfig {
 
     @Bean
@@ -78,5 +79,13 @@ public class AppConfig {
     @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    // agent 전용 Ollama leg (tool calling). 기존 ollama7bChatClient와 동일 모델·RestClient 재사용.
+    @Bean
+    OllamaAgentClient ollamaAgentClient(RestClient ollamaRestClient, ObjectMapper objectMapper,
+                                        OllamaProperties properties) {
+        return new OllamaAgentClient(ollamaRestClient, objectMapper,
+                properties.chatModel(), "ollama", properties.temperature());
     }
 }

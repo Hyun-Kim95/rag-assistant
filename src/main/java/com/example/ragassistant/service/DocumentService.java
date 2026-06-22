@@ -51,7 +51,7 @@ public class DocumentService {
             if (bytes.length == 0) {
                 throw new EmptyFileException();
             }
-            String content = documentParser.parse(filename,bytes);
+            String content = documentParser.parse(filename, bytes);
             if (content.isBlank()) {
                 // txt/md가 공백만 있는 경우 (PDF 빈 텍스트는 parser에서 이미 거부)
                 throw new EmptyFileException();
