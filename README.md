@@ -8,6 +8,7 @@ Ollama와 PostgreSQL pgvector로 업로드 문서를 검색해 답하는 Spring 
 **스택:** Java 17, Spring Boot, Gradle, Ollama (`qwen2.5:7b`, `nomic-embed-text`), PostgreSQL + pgvector 
 검색: hybrid(`pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`) + rerank(TEI cross-encoder `bge-reranker-v2-m3`, `rag.rerank-enabled` 기본 `true`, 미기동 시 fallback) 
 라우팅: Model Router — chat 추론을 다중 provider로 분기·폴백(Ollama primary + OpenAI 호환 SaaS leg, 예: Groq). 설정/요청 기준 라우팅, 실패 시 자동 폴백 ([`DECISIONS.md`](docs/DECISIONS.md) §15). 옵트인으로 **난이도 기반 라우팅**(`llm.routing-strategy: difficulty` — 분류기 `qwen2.5:3b`로 질문을 EASY/HARD 판정 → 작은/큰 모델 분기, 기본은 `fixed`) ([§16](docs/DECISIONS.md))
+에이전트: tool calling 에이전트 — LLM이 필요 시 문서 검색 도구(`search_documents`·`list_documents`)를 스스로 호출해 멀티스텝으로 답을 구성(`POST /api/agent`, [`DECISIONS.md`](docs/DECISIONS.md) §17)
 
 설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
@@ -51,6 +52,7 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 | `DELETE` | `/api/documents/{id}` | 문서 삭제 |
 | `POST` | `/api/chat` | RAG 응답 (JSON). 선택 `provider` 지정 시 해당 leg 우선, 응답에 `provider` 포함 |
 | `POST` | `/api/chat/stream` | RAG 스트리밍 (SSE). default 라우팅(요청 provider 미적용·폴백 없음) |
+| `POST` | `/api/agent` | tool calling 에이전트. LLM이 검색 도구를 호출해 멀티스텝 응답 (`answer`·`sources`·`grounded`·`steps`·`stopReason`). 선택 `provider` ([`DECISIONS.md`](docs/DECISIONS.md) §17) |
 | `GET` | `/api/health` | 앱 + 의존성 상태. db DOWN 또는 chat provider 0개 UP → `DOWN`·503, reranker만 DOWN → `DEGRADED`·200. `dependencies`에 provider별 상태 |
 
 `local` 프로필: Swagger http://localhost:8080/swagger-ui.html, debug API (`/api/debug/...`)

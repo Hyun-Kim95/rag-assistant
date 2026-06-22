@@ -88,6 +88,7 @@
 ### 선택
 - Docker PostgreSQL (`pgvector/pgvector:pg16`, `localhost:15432`) + DB `rag_assistant`
 - embedding: Ollama `nomic-embed-text`, dimension **768** (`RagProperties.embeddingDimension`)
+- **task prefix (nomic-embed-text v1.5 규약):** 질의는 `search_query: `, 문서는 `search_document: ` 접두어를 붙여 임베딩한다. `EmbeddingService.embedQuery()`/`embedDocument()`로 분리(소비처: `Retriever`=query, `VectorStoreService`=document). prefix가 빠지면 질의·문서가 같은 의미공간에 정렬되지 않아 검색 품질이 떨어진다. 적용 시 기존 문서는 **재인덱싱** 필요.
 - JDBC: `?::vector` cast + float[] → `'[...]'` 문자열 리터럴
 - 업로드 트랜잭션: `DocumentService.upload` + `VectorStoreService.indexDocument` (동일 `@Transactional`)
 
@@ -355,3 +356,27 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 - **분류기 호출이 매 질문 1회 추가 비용**(3b 생성). 분류 결과 캐싱·룰 기반 사전 분기 미적용.
 - 분류는 **2단(EASY/HARD)**·**모델 2개**만. 다단·N개 모델 일반화 미적용.
 - `difficulty` 전략은 **동기 `/api/chat`만**. 스트리밍은 fixed default 라우팅.
+
+## 17. Tool Calling Agent (2026-06)
+
+### 배경 / 목표
+- 기존 `/api/chat`은 단발 RAG(검색 1회 → 생성)다. LLM이 **필요할 때 도구를 스스로 호출**해 멀티스텝으로 답을 구성하는 에이전트 경로(`POST /api/agent`)를 추가한다.
+- 기존 RAG·`/api/chat`·스트리밍은 건드리지 않는다(회귀 0 목표).
+
+### 선택
+- **transport 분리**: tool calling 전용 `AgentChatClient` 인터페이스를 신설한다. 기존 `ChatModelClient`(텍스트 in/out)와 분리해 회귀 0. 구현은 `OpenAiCompatAgentClient`(Groq 등 OpenAI 호환 `tools`/`tool_calls`), `OllamaAgentClient`(Ollama tool 포맷 차이 흡수) + `RoutingAgentChatClient`(`@Primary`, groq→ollama 폴백).
+- **provider 전략**: Groq leg 우선 + Ollama 폴백(tool calling 안정성↑, Groq 키 미설정 시 Ollama 단독).
+- **도구 = 2종**: `search_documents`(기존 `Retriever.retrieve()` 래핑 — hybrid+rerank 그대로 재사용), `list_documents`(문서 목록). `@Component` `AgentTool`을 `ToolRegistry`가 자동 수집·디스패치(확장 포인트).
+- **루프 안전장치**: `agent.max-steps`(기본 5)·`agent.timeout-ms`. tool 오류·잘못된 인자·없는 도구명은 텍스트로 모델에 되먹여 복구 기회를 준다(스텝 1 소모). `stopReason` = `FINAL`|`MAX_STEPS`|`TIMEOUT`|`NO_PROVIDER`|`ERROR`.
+- **grounded/no-answer**: `/api/chat`과 동일 철학. 비정상 종료(TIMEOUT·MAX_STEPS)나 모델이 '근거 없음'으로 답하면 `sources`를 비우고 `grounded=false`.
+- 동기 MVP. SSE 스트리밍은 후속.
+
+### 구현 위치
+- `llm/agent/`(`AgentChatClient`·`OpenAiCompatAgentClient`·`OllamaAgentClient`·`RoutingAgentChatClient` + 전송 모델 `AgentMessage`/`ToolCall`/`ToolSpec`/`AgentTurn`), `agent/AgentOrchestrator`, `agent/tool/`(`AgentTool`·`ToolResult`·`ToolRegistry`·`SearchDocumentsTool`·`ListDocumentsTool`).
+- `controller/AgentController`(`POST /api/agent`), `dto/AgentRequest`·`AgentResponse`·`AgentStep`, `config/AgentProperties`(`agent.max-steps`·`timeout-ms`·`provider-order`), `config/AppConfig`(agent 빈 와이어링), `resources/application.yml`(`agent.*`).
+
+### 한계
+- 도구는 2종(검색·목록)뿐. 계산·외부 조회 등 확장 미적용.
+- 폴백은 루프 시작 시 provider 선택 수준(턴 중간 leg 교체 아님).
+- SSE 스트리밍·에이전트 전용 평가 하네스·프론트 UI는 후속.
+- 소형 모델 tool calling 신뢰도는 코퍼스·프롬프트에 민감(자가오염 코퍼스에서 품질 저하).

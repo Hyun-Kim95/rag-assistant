@@ -24,7 +24,7 @@
 문서 업로드 (또는 기동 시 FaqBootstrap)
   → 텍스트 추출 (TXT/MD/PDF)
   → Chunker (일반 문서) / FaqCatalog raw chunk (시스템 FAQ)
-  → EmbeddingService
+  → EmbeddingService (nomic task prefix: search_document:)
   → PostgreSQL(pgvector) 저장
 ```
 
@@ -34,7 +34,7 @@
 
 ```text
 사용자 질문
-  → EmbeddingService
+  → EmbeddingService (nomic task prefix: search_query:)
   → pgvector cosine top-k → min-score
   → PromptBuilder (context + question)
   → OllamaService (RagService 경유)
@@ -45,7 +45,7 @@
 
 ```text
 사용자 질문
-  → EmbeddingService + pg_trgm lexical (병렬 leg)
+  → EmbeddingService (search_query:) + pg_trgm lexical (병렬 leg)
   → leg별 min-score → RrfFusion (RRF, k=60) → top-k
   → PromptBuilder → OllamaService → Answer + Sources
 ```
@@ -68,6 +68,7 @@
 로컬 실행 기준 동작 범위이다. API·예외·DB는 아래 절, 기술 선택은 [`DECISIONS.md`](DECISIONS.md)를 본다.
 
 - 문서 업로드·파싱(TXT/MD/PDF) → chunk · embedding · pgvector 검색 → `POST /api/chat` / `POST /api/chat/stream`
+- tool calling 에이전트 — LLM이 검색 도구(`search_documents`·`list_documents`)를 호출해 멀티스텝 응답 → `POST /api/agent` (§17 in [`DECISIONS.md`](DECISIONS.md))
 - 검색 miss 시 no-answer(LLM 미호출), 답변 시 출처 snippet + `grounded`
 - hybrid — `pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`
 - rerank — 외부 TEI cross-encoder(`bge-reranker-v2-m3`)로 2단계 retrieval, `rag.rerank-enabled` 기본 `true` (§14 in [`DECISIONS.md`](DECISIONS.md))
@@ -91,12 +92,14 @@ com.example.ragassistant
 │   ├── OllamaProperties
 │   ├── RagProperties
 │   ├── RerankerProperties   (rag.reranker.*, TEI)
+│   ├── AgentProperties      (agent.max-steps·timeout-ms·provider-order)
 │   └── OpenApiConfig
 ├── controller
 │   ├── HealthController
 │   ├── DebugController
 │   ├── DocumentController
-│   └── ChatController
+│   ├── ChatController
+│   └── AgentController
 ├── dto
 │   ├── DocumentResponse
 │   ├── DocumentListResponse
@@ -105,6 +108,9 @@ com.example.ragassistant
 │   ├── ChatResponse
 │   ├── ChatStreamEvent
 │   ├── SourceCitation
+│   ├── AgentRequest
+│   ├── AgentResponse
+│   ├── AgentStep
 │   └── ErrorResponse
 ├── domain
 │   ├── Document
@@ -119,7 +125,19 @@ com.example.ragassistant
 │   └── EmbeddingRepository
 ├── llm
 │   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)
-│   └── EmbeddingModelClient   (embed 경계 — RAG 정책 미포함)
+│   ├── EmbeddingModelClient   (embed 경계 — RAG 정책 미포함)
+│   └── agent
+│       ├── AgentChatClient            (tool calling 경계 — ChatModelClient와 분리)
+│       ├── OpenAiCompatAgentClient    (Groq 등 OpenAI 호환 tool calling)
+│       ├── OllamaAgentClient          (Ollama tool calling)
+│       ├── RoutingAgentChatClient     (@Primary, provider 라우팅·폴백)
+│       └── AgentMessage / ToolCall / ToolSpec / AgentTurn (전송 모델)
+├── agent
+│   ├── AgentOrchestrator        (멀티스텝 루프·안전장치·grounded 판정)
+│   └── tool
+│       ├── AgentTool / ToolResult / ToolRegistry
+│       ├── SearchDocumentsTool   (Retriever.retrieve() 래핑)
+│       └── ListDocumentsTool     (DocumentService 목록)
 ├── search
 │   ├── RrfFusion
 │   └── Reranker            (TEI cross-encoder /rerank, 2단계 retrieval)
@@ -228,6 +246,37 @@ no-answer 예: `"answer": "문서에서 확인할 수 없는 질문입니다."`,
 ```
 
 HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 처리** 참고.
+
+### Agent (tool calling)
+
+| Method | Path | 설명 |
+|---|---|---|
+| POST | `/api/agent` | tool calling 에이전트. LLM이 도구를 호출해 멀티스텝으로 답 구성 |
+
+요청: `{ "message": "...", "provider": "groq" }` — `provider`는 선택(미지정 시 groq→ollama 라우팅).
+
+도구: `search_documents`(검색 파이프라인 = `Retriever.retrieve()` 래핑), `list_documents`(문서 목록). 본문 메타 단건 조회 `get_document`는 소형 모델의 환각 id 호출을 유발해 제거(§17 in [`DECISIONS.md`](DECISIONS.md)).
+
+응답 예시 (`POST /api/agent`):
+```json
+{
+  "answer": "유료 플랜 환불은 결제일로부터 14일 이내에 신청해야 합니다.",
+  "sources": [
+    { "documentName": "faq.md", "chunkId": 837, "snippet": "## 환불 정책 ...", "score": 0.99 }
+  ],
+  "grounded": true,
+  "provider": "groq",
+  "stopReason": "FINAL",
+  "steps": [
+    { "index": 1, "tool": "search_documents", "arguments": { "query": "환불 기간" }, "resultSummary": "8 sources" }
+  ]
+}
+```
+
+- `stopReason`: `FINAL` | `MAX_STEPS` | `TIMEOUT` | `NO_PROVIDER` | `ERROR`.
+- `steps`: tool 호출 추적(투명성·디버깅). 빈 배열 = 도구 없이 직답.
+- 안전장치: `agent.max-steps`(기본 5)·`agent.timeout-ms`. tool 오류·잘못된 인자는 텍스트로 모델에 되먹여 복구(스텝 1 소모).
+- grounded/no-answer 판정은 `/api/chat`과 동일 철학(근거 없으면 `sources` 비움). transport는 `ChatModelClient`와 분리된 `AgentChatClient`로 회귀 0.
 
 ## 6. DB 설계 (pgvector)
 
