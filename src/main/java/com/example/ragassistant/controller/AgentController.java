@@ -21,10 +21,9 @@ public class AgentController {
         this.orchestrator = orchestrator;
     }
 
-    @Operation(summary = "에이전트 질의", description = "필요한 도구(문서 검색 등)를 호출해 멀티스텝으로 답한다")
+    @Operation(summary = "에이전트 질의", description = "필요한 도구(문서 검색 등)를 호출해 멀티스텝으로 답한다. messages로 이전 대화를 보내면 멀티턴.")
     @PostMapping
     public AgentResponse agent(@RequestBody AgentRequest request) {
-        // 빈 message는 orchestrator에서 IllegalArgumentException → 400 BAD_REQUEST(GlobalExceptionHandler)
-        return orchestrator.run(request.message(), request.provider());
+        return orchestrator.run(request.message(), request.provider(), request.messages());
     }
 }

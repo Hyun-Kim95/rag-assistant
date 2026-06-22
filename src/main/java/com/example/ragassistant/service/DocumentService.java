@@ -134,4 +134,14 @@ public class DocumentService {
         }
         documentRepository.deleteById(id);
     }
+
+    /**
+     * agent 본문 도구(read_document·summarize_document)용 단건 조회.
+     * 메타가 아니라 본문(content)·이름 접근이 목적이라 도메인 Document를 반환한다.
+     * 없으면 DocumentNotFoundException(도구가 catch해 모델에 오류 텍스트로 되먹임).
+     */
+    public Document find(Long id) {
+        return documentRepository.findById(id)
+                .orElseThrow(() -> new DocumentNotFoundException(id));
+    }
 }

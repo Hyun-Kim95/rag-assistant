@@ -510,3 +510,76 @@ body {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/* 에이전트 모드 */
+.chat-mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chat-mode__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.agent-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.agent-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.agent-step--done {
+  border-color: #c8e6c9;
+  background: #f1f8f2;
+}
+
+.agent-step__icon {
+  flex: 0 0 auto;
+}
+
+.agent-step__tool {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.agent-step__args {
+  flex: 0 1 auto;
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-step__status {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  text-align: right;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

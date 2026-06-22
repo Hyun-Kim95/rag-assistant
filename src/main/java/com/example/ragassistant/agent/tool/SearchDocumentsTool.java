@@ -30,7 +30,8 @@ public class SearchDocumentsTool implements AgentTool {
 
     @Override
     public String description() {
-        return "업로드된 문서에서 질문과 관련된 내용을 검색한다. 문서 내용에 근거해 답하려면 먼저 이 도구를 호출한다.";
+        return "업로드된 문서에서 질문과 관련된 내용을 검색한다. 문서 내용에 근거해 답하려면 먼저 이 도구를 호출한다. "
+                + "query에는 사용자의 질문을 한국어 원문 그대로 넣는다. 단어를 임의로 바꾸거나 번역·축약하지 않는다.";
     }
 
     @Override
@@ -40,7 +41,7 @@ public class SearchDocumentsTool implements AgentTool {
                 "properties", Map.of(
                         "query", Map.of(
                                 "type", "string",
-                                "description", "검색할 핵심 키워드나 질문")),
+                                "description", "검색어. 사용자 질문 원문을 그대로 사용(임의 변형 금지).")),
                 "required", List.of("query"));
     }
 

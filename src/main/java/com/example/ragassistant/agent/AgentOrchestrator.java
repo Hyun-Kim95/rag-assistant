@@ -5,6 +5,7 @@ import com.example.ragassistant.agent.tool.ToolResult;
 import com.example.ragassistant.config.AgentProperties;
 import com.example.ragassistant.dto.AgentResponse;
 import com.example.ragassistant.dto.AgentStep;
+import com.example.ragassistant.dto.ConversationTurn;
 import com.example.ragassistant.dto.SourceCitation;
 import com.example.ragassistant.llm.agent.AgentChatClient;
 import com.example.ragassistant.llm.agent.AgentMessage;
@@ -37,17 +38,25 @@ public class AgentOrchestrator {
     private static final String SYSTEM = """
             당신은 업로드된 문서만 근거로 답하는 한국어 어시스턴트입니다.
 
-            [도구 사용 규칙]
-            - 문서 내용이 필요한 질문은 반드시 먼저 search_documents 로 검색한다.
-            - 답변은 검색 결과(snippet)에 '실제로 나온 내용'만 사용한다. 검색 결과에 없는 이유·사실·항목을 지어내지 않는다.
-            - 검색 결과에 답의 근거가 없으면 "관련 내용을 찾을 수 없습니다"라고 솔직히 답한다.
-            - 어떤 문서가 올라와 있는지 물으면 list_documents 로 목록을 확인한다.
+            [도구]
+            - list_documents: 어떤 문서가 올라와 있는지(파일명·개수) 확인.
+            - search_documents: 문서 내용에서 질문과 관련된 부분을 검색.
+            - read_document: 특정 문서의 일부를 자세히 읽기.
+            - summarize_document: 특정 문서 하나를 요약.
+
+            [호출 규칙]
+            - 문서 목록/어떤 문서가 있는지 묻는 질문: list_documents 를 한 번만 호출하고, 그 파일명 목록을 바로 답한다. 이때 search_documents·summarize_document 를 추가로 호출하지 않는다.
+            - 문서 내용을 묻는 질문: 먼저 search_documents 로 검색한다.
+            - summarize_document·read_document 는 사용자가 특정 문서를 지목해 요약/상세를 요청할 때만, 그 문서 하나에 대해 호출한다. 모든 문서를 자동으로 요약하지 않는다.
+            - 충분한 결과를 얻으면 더 이상 도구를 호출하지 말고 바로 답한다. 같은 도구를 같은 인자로 반복 호출하지 않는다.
 
             [작성 규칙]
-            - 간결한 한국어로 쓰고, 같은 문장을 반복하지 않는다.
-            - 중국어나 불필요한 영어 문장을 섞지 않는다.
+            - 검색/읽기 결과에 '실제로 나온 내용'만 사용하고, 없는 사실을 지어내지 않는다.
+            - 근거가 없으면 "관련 내용을 찾을 수 없습니다"라고 솔직히 답한다. (단, 문서 목록 질문은 list_documents 결과로 답하면 된다.)
+            - 간결한 한국어로 쓰고, 같은 문장을 반복하지 않으며, 불필요한 영어·중국어를 섞지 않는다.
             """;
 
+    private static final String TOOL_BUDGET_FALLBACK = "여러 번 도구를 사용했지만 답을 마무리하지 못했습니다. 질문을 더 구체적으로 다시 시도해 주세요.";
     private static final String MAX_STEPS_FALLBACK = "단계 한도에 도달해 답을 마무리하지 못했습니다. 질문을 더 구체적으로 다시 시도해 주세요.";
     private static final String TIMEOUT_FALLBACK = "처리 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.";
     /**
@@ -71,51 +80,139 @@ public class AgentOrchestrator {
     }
 
     public AgentResponse run(String message, String provider) {
+        return loop(message, provider, List.of(), AgentStreamHandler.NOOP);     // 단발
+    }
+
+    public AgentResponse run(String message, String provider, List<ConversationTurn> history) {
+        return loop(message, provider, history, AgentStreamHandler.NOOP);       // 멀티턴(동기)
+    }
+
+    /**
+     * 스트리밍: 도구 호출/결과를 handler로 실시간 방출하고 최종 답을 delta로 흘린다.
+     */
+    public AgentResponse runStreaming(String message, String provider, List<ConversationTurn> history, AgentStreamHandler handler) {
+        return loop(message, provider, history, handler);
+    }
+
+    private AgentResponse loop(String message, String provider, List<ConversationTurn> history, AgentStreamHandler handler) {
         if (!StringUtils.hasText(message)) {
             throw new IllegalArgumentException("message가 비어 있습니다.");
         }
 
-        List<AgentMessage> history = new ArrayList<>();
-        history.add(AgentMessage.system(SYSTEM));
-        history.add(AgentMessage.user(message.trim()));
+        List<AgentMessage> conv = new ArrayList<>();
+        conv.add(AgentMessage.system(SYSTEM));
+        seedHistory(conv, history);                                 // T-B: 이전 대화(최근 N턴)
+        conv.add(AgentMessage.user(message.trim()));
 
         List<ToolSpec> tools = toolRegistry.specs();
         List<AgentStep> steps = new ArrayList<>();
-        Map<Long, SourceCitation> sourcesByChunk = new LinkedHashMap<>();   // chunkId로 중복 제거
+        Map<Long, SourceCitation> sourcesByChunk = new LinkedHashMap<>();
         long deadline = System.currentTimeMillis() + props.timeoutMs();
         String usedProvider = null;
-        String lastContent = "";
+        int toolCalls = 0;
+        boolean budgetHit = false;
 
-        for (int step = 1; step <= props.maxSteps(); step++) {
+        for (int step = 1; step <= props.maxSteps() && !budgetHit; step++) {
             if (System.currentTimeMillis() > deadline) {
                 return finalize(TIMEOUT_FALLBACK, sourcesByChunk, usedProvider, "TIMEOUT", steps);
             }
 
-            // 전 provider 불가 시 AllProvidersUnavailableException → 503(LLM_ALL_PROVIDERS_UNAVAILABLE) 전파
-            AgentTurn turn = agentChatClient.chat(history, tools, provider);
+            AgentTurn turn = agentChatClient.chat(conv, tools, provider);
             usedProvider = turn.provider();
-            if (StringUtils.hasText(turn.content())) {
-                lastContent = turn.content();
-            }
 
             if (!turn.hasToolCalls()) {
-                // 도구 호출 없음 → 최종 답
+                emitDeltas(handler, turn.content());                // 최종 답을 조각내어 흘림
                 return finalize(turn.content(), sourcesByChunk, usedProvider, "FINAL", steps);
             }
 
-            // 도구 호출 턴: assistant 메시지(+tool_calls)를 히스토리에 기록
-            history.add(AgentMessage.assistant(turn.content(), turn.toolCalls()));
-            for (ToolCall tc : turn.toolCalls()) {
+            conv.add(AgentMessage.assistant(turn.content(), turn.toolCalls()));
+            // 예산 내에서 '실제 실행할' 도구만 assistant 메시지에 남긴다.
+            // tool_calls와 tool 응답 개수가 어긋나면 일부 provider(Groq 등)가 400으로 거부 → 강제 종결이 빈 응답이 됨.
+            List<ToolCall> calls = turn.toolCalls();
+            int remaining = props.maxToolCalls() - toolCalls;
+            if (calls.size() > remaining) {
+                calls = calls.subList(0, Math.max(0, remaining));
+                budgetHit = true;                                   // 남는 건 버리고 다음 루프는 중단(강제 종결로)
+            }
+            conv.add(AgentMessage.assistant(turn.content(), calls));
+            for (ToolCall tc : calls) {
                 JsonNode args = parseArgs(tc.argumentsJson());
+                Map<String, Object> argMap = toMap(args);
+                int index = steps.size() + 1;
+                handler.onToolCall(index, tc.name(), argMap);       // step: tool_call
+
                 ToolResult result = safeExecute(tc.name(), args);
                 result.sources().forEach(s -> sourcesByChunk.putIfAbsent(s.chunkId(), s));
-                steps.add(new AgentStep(steps.size() + 1, tc.name(), toMap(args), summarize(result)));
-                history.add(AgentMessage.tool(tc.id(), result.content()));
+                String summary = summarize(result);
+                steps.add(new AgentStep(index, tc.name(), argMap, summary));
+                handler.onToolResult(index, tc.name(), summary);    // step: tool_result
+
+                conv.add(AgentMessage.tool(tc.id(), result.content()));
+                toolCalls++;
             }
         }
-        // 루프 소진 → best-effort
-        String answer = StringUtils.hasText(lastContent) ? lastContent : MAX_STEPS_FALLBACK;
-        return finalize(answer, sourcesByChunk, usedProvider, "MAX_STEPS", steps);
+
+        // max-steps 또는 도구 예산 소진 → 도구 없이 마지막으로 답을 강제(추가 루프 차단)
+        return forceFinalAnswer(conv, usedProvider, sourcesByChunk, steps, handler,
+                budgetHit ? "TOOL_BUDGET" : "MAX_STEPS");
+    }
+
+    /**
+     * 안전장치 발동 시 마지막 한 번을 '도구 없이' 호출해 수집한 정보로 답을 종결한다.
+     * tools=[]라 모델이 더 이상 도구를 못 부르고 텍스트로 답한다(런어웨이 차단).
+     * 모델이 실제 답을 내면 grounded 유지 위해 FINAL로 확정한다.
+     */
+    private AgentResponse forceFinalAnswer(List<AgentMessage> conv, String provider,
+                                           Map<Long, SourceCitation> sources, List<AgentStep> steps,
+                                           AgentStreamHandler handler, String reason) {
+        String answer;
+        try {
+            conv.add(AgentMessage.user(
+                    "도구를 더 호출하지 말고, 지금까지 수집한 정보만으로 한국어로 답하세요. 정보가 부족하면 솔직히 모른다고 답하세요."));
+            AgentTurn turn = agentChatClient.chat(conv, List.of(), provider);   // tools 없음 → 강제 종결
+            answer = StringUtils.hasText(turn.content())
+                    ? turn.content()
+                    : ("TOOL_BUDGET".equals(reason) ? TOOL_BUDGET_FALLBACK : MAX_STEPS_FALLBACK);
+        } catch (Exception e) {
+            log.warn("강제 종결 응답 실패: {}", e.toString());
+            answer = "TOOL_BUDGET".equals(reason) ? TOOL_BUDGET_FALLBACK : MAX_STEPS_FALLBACK;
+        }
+        emitDeltas(handler, answer);
+        return finalize(answer, sources, provider, "FINAL", steps);
+    }
+
+    /**
+     * 최종 답을 일정 크기로 잘라 delta로 방출.
+     * MVP: tool-calling 응답은 토큰 스트리밍이 까다로워, 최종 답 '생성 완료 후' 조각 전송한다.
+     * (실시간 체감의 핵심인 도구 호출 step은 이미 생성 도중 실시간 방출된다.)
+     * 진짜 토큰 스트리밍은 후속(transport streaming) 과제.
+     */
+    private void emitDeltas(AgentStreamHandler handler, String answer) {
+        if (handler == AgentStreamHandler.NOOP || !StringUtils.hasText(answer)) {
+            return;
+        }
+        int size = 24;
+        for (int i = 0; i < answer.length(); i += size) {
+            handler.onDelta(answer.substring(i, Math.min(i + size, answer.length())));
+        }
+    }
+
+    private void seedHistory(List<AgentMessage> conv, List<ConversationTurn> history) {
+        if (history == null || history.isEmpty()) {
+            return;
+        }
+        int from = Math.max(0, history.size() - props.maxHistoryTurns());
+        for (ConversationTurn t : history.subList(from, history.size())) {
+            if (t == null || !StringUtils.hasText(t.role()) || !StringUtils.hasText(t.content())) {
+                continue;
+            }
+            String role = t.role().trim().toLowerCase();
+            if ("user".equals(role)) {
+                conv.add(AgentMessage.user(t.content()));
+            } else if ("assistant".equals(role)) {
+                conv.add(AgentMessage.assistant(t.content(), null));
+            }
+        }
     }
 
     /**

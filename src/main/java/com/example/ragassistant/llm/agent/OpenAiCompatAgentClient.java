@@ -50,8 +50,11 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", props.model());
         body.put("messages", toWireMessages(messages));
-        body.put("tools", toWireTools(tools));
-        body.put("tool_choice", "auto");
+        List<Map<String, Object>> wireTools = toWireTools(tools);
+        if (!wireTools.isEmpty()) {         // tools 비면 tool_choice도 빼야 함(빈 배열 거부 provider 대비)
+            body.put("tools", wireTools);
+            body.put("tool_choice", "auto");
+        }
         body.put("temperature", 0);
         body.put("stream", false);
         try {

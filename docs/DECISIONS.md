@@ -376,7 +376,40 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 - `controller/AgentController`(`POST /api/agent`), `dto/AgentRequest`·`AgentResponse`·`AgentStep`, `config/AgentProperties`(`agent.max-steps`·`timeout-ms`·`provider-order`), `config/AppConfig`(agent 빈 와이어링), `resources/application.yml`(`agent.*`).
 
 ### 한계
-- 도구는 2종(검색·목록)뿐. 계산·외부 조회 등 확장 미적용.
+- 도구는 2종(검색·목록)뿐. 계산·외부 조회 등 확장 미적용. → **§18에서 본문 도구(`read_document`·`summarize_document`) 추가.**
 - 폴백은 루프 시작 시 provider 선택 수준(턴 중간 leg 교체 아님).
-- SSE 스트리밍·에이전트 전용 평가 하네스·프론트 UI는 후속.
+- SSE 스트리밍·멀티턴·프론트 UI는 후속. → **§18에서 멀티턴 메모리·스트리밍 스텝 UI 추가.**
 - 소형 모델 tool calling 신뢰도는 코퍼스·프롬프트에 민감(자가오염 코퍼스에서 품질 저하).
+- 에이전트 전용 평가 하네스는 후속.
+
+## 18. Tool Calling Agent v2 — 본문 도구 · 멀티턴 메모리 · 스트리밍 (2026-06)
+
+### 배경 / 목표
+- v1(§17)은 `search_documents`·`list_documents` + 단발 멀티스텝 루프였다. "RAG 래퍼"를 넘어 **에이전트다움**을 강화한다: ① 단발 RAG가 못 하는 **본문 접근 도구**, ② **멀티턴 대화 메모리**, ③ **스트리밍 + 스텝 UI**.
+- 기존 `/api/chat`·`/api/chat/stream`·v1 `/api/agent`는 건드리지 않는다(회귀 0).
+
+### 선택
+- **본문 도구 2종 추가**: `read_document`(특정 문서를 청크 범위로 실제 본문 반환 — `ChunkService`, top-k 단편이 아니라 연속 구간), `summarize_document`(문서 전체 본문 → LLM 요약). 둘 다 토큰 폭증 방지를 위해 상한(`read-max-chunks`·`read-max-chars`·`summarize-max-chars`)을 둔다. D9(요약 방식)는 1차 truncate(상위 본문 예산)로, map-reduce는 후속.
+- **멀티턴 메모리 = 무상태(A안)**: 클라이언트가 이전 대화 `messages[]`(role·content)를 요청에 포함, 서버는 무상태. system 다음·현재 user 앞에 시드하고 `agent.max-history-turns`로 최근 N턴만(오래된 건 드롭). 이전 턴의 **도구 출력은 히스토리에 넣지 않음**(답변 텍스트만 맥락). 무인증·로컬·기존 무상태 RAG와 정합, 구현 단순(서버 세션·TTL 불필요).
+- **스트리밍 SSE**: `POST /api/agent/stream`. 이벤트 `step`(tool_call/tool_result) → `delta`(최종 답) → `done`/`error`. 도구 호출은 생성 도중 실시간 방출(에이전트 체감의 핵심), **최종 답은 생성 완료 후 조각(delta)으로 흘림**(tool-calling 응답의 진짜 토큰 스트리밍은 까다로워 MVP에서 보류). 폴백 없는 default leg 단독(`/api/chat/stream`과 동일 정책). `SseEmitter` + 전용 executor, payload는 JSON 문자열로 직렬화해 전송(컨버터 모호성 회피).
+
+### 런어웨이 방지 (실사용에서 발견·수정)
+- **문제:** 소형 모델(Groq `llama-3.1-8b-instant`)이 목록 질문에도 `summarize`·`read_document`를 과호출하고, `read_document`의 "이어서 더 읽으려면…" 안내를 따라 `fromChunk`를 끝없이 증가시켜 **수백 회 호출 → 컨텍스트 초과 오류**. `max-steps`(모델 턴)는 한 턴에 도구를 수십 개 부르면 못 막았다.
+- **수정:** ① `agent.max-tool-calls`(기본 10) **도구 호출 총량 상한** 추가, 초과 시 루프 중단. ② 상한/`max-steps` 소진 시 **도구 없이 1회 강제 종결**(`tools=[]`로 호출 → 모델이 수집 정보로 텍스트 답을 내고 종료). ③ 상한이 **턴 중간**에 걸릴 때 실행한 도구만 assistant 메시지에 남겨 `tool_calls`↔`tool` 응답 **개수 일치**(불일치 시 Groq가 400으로 거부 → 강제 종결이 빈 응답이 되던 버그). ④ `read_document`의 연속 호출 부추김 문구 제거.
+- **모델 상향:** 8b는 한국어 도구 인자(검색 쿼리)를 깨뜨려(`"번드 버트 총창소"` 등) 검색이 빗나갔다. 에이전트 leg를 `llama-3.3-70b-versatile`로 올리니 쿼리 품질·자기교정이 개선(예: "DECISIONS.md에서 벡터 저장소?" → PostgreSQL + pgvector 정답). 단 이 모델 값은 `/api/chat`과 공유(OpenAiCompat) — 분리는 후속.
+
+### grounded / 상태
+- v1 철학 계승. 목록형 답(`list_documents`)은 본문 인용이 아니라 `grounded=false`(출처 없음). read/summarize는 문서 단위 `SourceCitation` 1건을 누적해 `grounded=true`.
+
+### 구현 위치
+- `agent/AgentStreamHandler`(이벤트 싱크, NOOP=동기), `agent/AgentOrchestrator`(`run`/`runStreaming` + `loop` 통합·`seedHistory`·`forceFinalAnswer`·도구 상한), `agent/tool/ReadDocumentTool`·`SummarizeDocumentTool`.
+- `controller/AgentStreamController`(`POST /api/agent/stream`, `SseEmitter`), `dto/ConversationTurn`·`AgentRequest`(`messages` 확장), `config/AgentProperties`(`maxToolCalls`·`maxHistoryTurns`·`readMaxChunks`·`readMaxChars`·`summarizeMaxChars`), `config/AppConfig`(`agentStreamExecutor` 빈), `resources/application.yml`(`agent.*`), `static/`(에이전트 모드 토글·스텝 칩·멀티턴·SSE).
+
+### 수용 기준 / 테스트
+- AC-08~13(본문 도구·멀티턴·히스토리 상한·스트리밍 이벤트 순서·빈 입력 400)을 `AgentOrchestratorTest`·`AgentStreamControllerTest`로 자동화(Mockito, DB·LLM 비의존). AC↔테스트 `@DisplayName`로 1:1 추적.
+
+### 한계
+- `summarize_document`는 1차 truncate(상위 본문 예산) — 긴 문서 전체 정확 요약(map-reduce) 미적용.
+- 스트리밍 최종 답은 생성 완료 후 조각 전송(진짜 토큰 스트리밍 아님).
+- 에이전트 leg 모델이 `/api/chat`과 공유 — 에이전트 전용 모델 분리 미적용.
+- 소형 모델 tool calling 규율은 여전히 모델 의존(상한·강제 종결로 답은 보장하나 과호출 자체는 모델 품질에 좌우).

@@ -48,7 +48,10 @@ public class OllamaAgentClient implements AgentChatClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("messages", toWireMessages(messages));
-        body.put("tools", toWireTools(tools));
+        List<Map<String, Object>> wireTools = toWireTools(tools);
+        if (!wireTools.isEmpty()) {
+            body.put("tools", wireTools);
+        }
         body.put("stream", false);
         body.put("options", Map.of("temperature", temperature, "num_ctx", 8192));
         try {

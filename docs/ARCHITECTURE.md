@@ -68,7 +68,7 @@
 로컬 실행 기준 동작 범위이다. API·예외·DB는 아래 절, 기술 선택은 [`DECISIONS.md`](DECISIONS.md)를 본다.
 
 - 문서 업로드·파싱(TXT/MD/PDF) → chunk · embedding · pgvector 검색 → `POST /api/chat` / `POST /api/chat/stream`
-- tool calling 에이전트 — LLM이 검색 도구(`search_documents`·`list_documents`)를 호출해 멀티스텝 응답 → `POST /api/agent` (§17 in [`DECISIONS.md`](DECISIONS.md))
+- tool calling 에이전트 — LLM이 도구(`search_documents`·`list_documents`·`read_document`·`summarize_document`)를 호출해 멀티스텝 응답 → `POST /api/agent`. 멀티턴 메모리(무상태 `messages[]`) + 스트리밍 스텝 UI `POST /api/agent/stream`(SSE) (§17·§18 in [`DECISIONS.md`](DECISIONS.md))
 - 검색 miss 시 no-answer(LLM 미호출), 답변 시 출처 snippet + `grounded`
 - hybrid — `pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`
 - rerank — 외부 TEI cross-encoder(`bge-reranker-v2-m3`)로 2단계 retrieval, `rag.rerank-enabled` 기본 `true` (§14 in [`DECISIONS.md`](DECISIONS.md))
@@ -92,14 +92,15 @@ com.example.ragassistant
 │   ├── OllamaProperties
 │   ├── RagProperties
 │   ├── RerankerProperties   (rag.reranker.*, TEI)
-│   ├── AgentProperties      (agent.max-steps·timeout-ms·provider-order)
+│   ├── AgentProperties      (agent.max-steps·max-tool-calls·timeout-ms·provider-order·max-history-turns·read-*·summarize-max-chars)
 │   └── OpenApiConfig
 ├── controller
 │   ├── HealthController
 │   ├── DebugController
 │   ├── DocumentController
 │   ├── ChatController
-│   └── AgentController
+│   ├── AgentController        (POST /api/agent, 동기)
+│   └── AgentStreamController  (POST /api/agent/stream, SSE)
 ├── dto
 │   ├── DocumentResponse
 │   ├── DocumentListResponse
@@ -108,9 +109,10 @@ com.example.ragassistant
 │   ├── ChatResponse
 │   ├── ChatStreamEvent
 │   ├── SourceCitation
-│   ├── AgentRequest
+│   ├── AgentRequest          (message·provider·messages[] 멀티턴)
 │   ├── AgentResponse
 │   ├── AgentStep
+│   ├── ConversationTurn       (멀티턴 1턴: role·content)
 │   └── ErrorResponse
 ├── domain
 │   ├── Document
@@ -133,11 +135,14 @@ com.example.ragassistant
 │       ├── RoutingAgentChatClient     (@Primary, provider 라우팅·폴백)
 │       └── AgentMessage / ToolCall / ToolSpec / AgentTurn (전송 모델)
 ├── agent
-│   ├── AgentOrchestrator        (멀티스텝 루프·안전장치·grounded 판정)
+│   ├── AgentOrchestrator        (멀티스텝 루프·안전장치·grounded 판정·메모리 시드·스트리밍)
+│   ├── AgentStreamHandler       (스트리밍 이벤트 싱크: onToolCall·onToolResult·onDelta, NOOP=동기)
 │   └── tool
 │       ├── AgentTool / ToolResult / ToolRegistry
 │       ├── SearchDocumentsTool   (Retriever.retrieve() 래핑)
-│       └── ListDocumentsTool     (DocumentService 목록)
+│       ├── ListDocumentsTool     (DocumentService 목록)
+│       ├── ReadDocumentTool      (ChunkService 본문 청크 범위)
+│       └── SummarizeDocumentTool (DocumentService 본문 + LLM 요약)
 ├── search
 │   ├── RrfFusion
 │   └── Reranker            (TEI cross-encoder /rerank, 2단계 retrieval)
@@ -251,11 +256,12 @@ HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 
 
 | Method | Path | 설명 |
 |---|---|---|
-| POST | `/api/agent` | tool calling 에이전트. LLM이 도구를 호출해 멀티스텝으로 답 구성 |
+| POST | `/api/agent` | tool calling 에이전트(동기). LLM이 도구를 호출해 멀티스텝으로 답 구성 |
+| POST | `/api/agent/stream` | 에이전트 스트리밍(SSE). 도구 호출/결과 `step` + 최종 답 `delta` (§18 in [`DECISIONS.md`](DECISIONS.md)) |
 
-요청: `{ "message": "...", "provider": "groq" }` — `provider`는 선택(미지정 시 groq→ollama 라우팅).
+요청: `{ "message": "...", "provider": "groq", "messages": [...] }` — `provider`·`messages`는 선택. `messages`는 이전 대화(무상태 멀티턴, 서버가 `agent.max-history-turns`로 최근 N턴만 사용). 미지정 시 단발.
 
-도구: `search_documents`(검색 파이프라인 = `Retriever.retrieve()` 래핑), `list_documents`(문서 목록). 본문 메타 단건 조회 `get_document`는 소형 모델의 환각 id 호출을 유발해 제거(§17 in [`DECISIONS.md`](DECISIONS.md)).
+도구: `search_documents`(검색 = `Retriever.retrieve()` 래핑), `list_documents`(문서 목록), `read_document`(특정 문서 본문을 청크 범위로 — `ChunkService`), `summarize_document`(문서 전체 기반 LLM 요약). 본문 메타 단건 조회 `get_document`는 소형 모델의 환각 id 호출을 유발해 제거(§17 in [`DECISIONS.md`](DECISIONS.md)).
 
 응답 예시 (`POST /api/agent`):
 ```json
@@ -275,8 +281,23 @@ HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 
 
 - `stopReason`: `FINAL` | `MAX_STEPS` | `TIMEOUT` | `NO_PROVIDER` | `ERROR`.
 - `steps`: tool 호출 추적(투명성·디버깅). 빈 배열 = 도구 없이 직답.
-- 안전장치: `agent.max-steps`(기본 5)·`agent.timeout-ms`. tool 오류·잘못된 인자는 텍스트로 모델에 되먹여 복구(스텝 1 소모).
+- 안전장치: `agent.max-steps`(모델 턴 상한, 기본 5)·`agent.max-tool-calls`(도구 호출 총량 상한, 기본 10)·`agent.timeout-ms`. 상한 소진 시 **도구 없이 1회 강제 종결**(런어웨이 차단, §18). tool 오류·잘못된 인자는 텍스트로 모델에 되먹여 복구(스텝 1 소모).
 - grounded/no-answer 판정은 `/api/chat`과 동일 철학(근거 없으면 `sources` 비움). transport는 `ChatModelClient`와 분리된 `AgentChatClient`로 회귀 0.
+
+#### 스트리밍 (`POST /api/agent/stream`, SSE)
+
+요청 body는 `/api/agent`와 동일. 빈 `message`는 스트림 열기 전 **400 JSON**.
+
+| SSE event | data (JSON) | 설명 |
+|---|---|---|
+| `step` | `{"index":1,"phase":"tool_call","tool":"search_documents","arguments":{...}}` | 도구 호출 시작 |
+| `step` | `{"index":1,"phase":"tool_result","tool":"search_documents","resultSummary":"8 sources"}` | 도구 결과 |
+| `delta` | `{"text":"..."}` | 최종 답 토큰(청크) |
+| `done` | `{"answer":"...","sources":[...],"grounded":true,"provider":"...","stopReason":"FINAL","steps":[...]}` | 최종 페이로드(`AgentResponse` 동일 필드) |
+| `error` | `{"error":"...","message":"..."}` | 처리 중 오류 |
+
+- 순서: `step`(tool_call→tool_result)* → `delta`* → `done`. 도구 호출은 생성 도중 실시간 방출, 최종 답은 생성 완료 후 조각(delta)으로 흘림(MVP; 진짜 토큰 스트리밍은 후속).
+- 스트리밍은 **default leg 단독**(폴백 없음, `/api/chat/stream`과 동일 정책).
 
 ## 6. DB 설계 (pgvector)
 
@@ -344,6 +365,16 @@ rag:
     base-url: http://localhost:8085   # TEI 컨테이너
     model: BAAI/bge-reranker-v2-m3
     timeout-ms: 5000        # 초과 시 fallback(원본 순서)
+
+agent:                      # tool calling 에이전트 (§17·§18 DECISIONS)
+  max-steps: 5              # 모델 턴 상한
+  max-tool-calls: 10        # 도구 호출 총량 상한(런어웨이 방지) → 초과 시 도구 없이 강제 종결
+  timeout-ms: 180000
+  provider-order: [groq, ollama]
+  max-history-turns: 6      # 멀티턴 메모리 상한(최근 N턴)
+  read-max-chunks: 6        # read_document 1회 청크 수
+  read-max-chars: 4000      # read_document 본문 길이 상한
+  summarize-max-chars: 8000 # summarize_document 본문 예산
 ```
 
 TEI reranker는 별도 컨테이너(예: `dietManagement` docker-compose의 `tei-reranker`, 포트 8085)로 띄운다. 미실행이어도 `rerank-enabled: true`면 fallback으로 RAG는 동작한다(품질만 저하).

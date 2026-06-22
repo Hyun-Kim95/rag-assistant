@@ -12,6 +12,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Configuration
 @EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class,
@@ -87,5 +89,11 @@ public class AppConfig {
                                         OllamaProperties properties) {
         return new OllamaAgentClient(ollamaRestClient, objectMapper,
                 properties.chatModel(), "ollama", properties.temperature());
+    }
+
+    // SSE 스트리밍 동안 orchestrator 루프를 요청 스레드와 분리해 실행
+    @Bean(destroyMethod = "shutdown")
+    ExecutorService agentStreamExecutor() {
+        return Executors.newCachedThreadPool();
     }
 }

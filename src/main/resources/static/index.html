@@ -45,6 +45,14 @@
       <section class="card" aria-labelledby="chat-title">
         <h2 id="chat-title" class="card__title">질문하기</h2>
 
+        <div class="chat-mode">
+          <label class="chat-mode__toggle">
+            <input type="checkbox" id="agent-mode-toggle">
+            <span>에이전트 모드 (도구 호출·멀티턴)</span>
+          </label>
+          <button type="button" id="agent-reset-btn" class="btn btn--ghost" hidden>대화 초기화</button>
+        </div>
+
         <div id="chat-thread" class="chat-thread">
           <p class="chat-empty">문서를 업로드한 뒤 질문을 입력하세요.</p>
         </div>

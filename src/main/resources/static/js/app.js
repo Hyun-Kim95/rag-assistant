@@ -16,10 +16,14 @@
     questionInput: document.getElementById("question-input"),
     sendBtn: document.getElementById("send-btn"),
     chatLoading: document.getElementById("chat-loading"),
+    agentModeToggle: document.getElementById("agent-mode-toggle"),
+    agentResetBtn: document.getElementById("agent-reset-btn"),
   };
 
   let chatBusy = false;
   let uploadBusy = false;
+  // 멀티턴 메모리(무상태): [{role, content}, ...] — 매 요청에 직전 대화로 함께 전송
+  let agentHistory = [];
 
   /** 하단 고정 판정 여유(px) — 이보다 위면 사용자가 스크롤 올린 것으로 간주 */
   const SCROLL_PIN_THRESHOLD = 48;
@@ -127,6 +131,54 @@
       bubble: wrap.querySelector(".message__bubble"),
       sourcesHost: wrap.querySelector(".sources-host"),
     };
+  }
+
+  /** 에이전트용: 스텝 표시 영역 + 스트리밍 말풍선 + 출처 자리 */
+  function appendAgentShell() {
+    clearChatEmpty();
+    const wrap = document.createElement("div");
+    wrap.className = "message message--assistant";
+    wrap.innerHTML =
+      '<p class="message__label">답변</p>' +
+      '<div class="agent-steps"></div>' +
+      '<div class="message__bubble message__bubble--streaming"></div>' +
+      '<div class="sources-host"></div>';
+    els.chatThread.appendChild(wrap);
+    scrollChatToBottom(true);
+    return {
+      wrap,
+      steps: wrap.querySelector(".agent-steps"),
+      bubble: wrap.querySelector(".message__bubble"),
+      sourcesHost: wrap.querySelector(".sources-host"),
+    };
+  }
+
+  /** step 이벤트(tool_call/tool_result)를 칩으로 렌더 */
+  function renderAgentStep(stepsHost, data) {
+    if (data.phase === "tool_call") {
+      const row = document.createElement("div");
+      row.className = "agent-step";
+      row.dataset.index = String(data.index);
+      const argStr = data.arguments ? JSON.stringify(data.arguments) : "";
+      row.title = argStr ? `${data.tool} ${argStr}` : data.tool;
+      row.innerHTML =
+        '<span class="agent-step__icon" aria-hidden="true">🔧</span>' +
+        `<span class="agent-step__tool">${escapeHtml(data.tool)}</span>` +
+        `<span class="agent-step__args">${escapeHtml(argStr)}</span>` +
+        '<span class="agent-step__status">실행 중…</span>';
+      stepsHost.appendChild(row);
+    } else if (data.phase === "tool_result") {
+      const row = stepsHost.querySelector(`.agent-step[data-index="${data.index}"]`);
+      if (row) {
+        const status = row.querySelector(".agent-step__status");
+        if (status) {
+          status.textContent = data.resultSummary || "완료";
+          status.title = data.resultSummary || "완료";
+        }
+        row.classList.add("agent-step--done");
+      }
+    }
+    scrollChatToBottom(false);
   }
 
   function buildSourceCardsHtml(sources) {
@@ -367,6 +419,78 @@
     }
   }
 
+  async function sendAgentQuestion(question) {
+    if (!question || chatBusy) {
+      return;
+    }
+    hideError();
+    setChatBusy(true);
+    appendUserMessage(question);
+    els.questionInput.value = "";
+
+    const shell = appendAgentShell();
+    els.chatLoading.classList.remove("is-visible");
+    let buffer = "";
+    let finalAnswer = "";
+
+    try {
+      const res = await fetch("/api/agent/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // message=현재 질문, messages=직전 대화(무상태 메모리)
+        body: JSON.stringify({ message: question, messages: agentHistory }),
+      });
+
+      if (!res.ok) {
+        shell.wrap.remove();
+        showError(await parseError(res));
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        buffer = parseSseChunk(buffer, (eventName, data) => {
+          if (eventName === "step") {
+            renderAgentStep(shell.steps, data);
+          } else if (eventName === "delta" && data.text) {
+            shell.bubble.textContent += data.text;
+            scrollChatToBottom(false);
+          } else if (eventName === "done") {
+            shell.bubble.classList.remove("message__bubble--streaming");
+            if (data.answer != null) {
+              shell.bubble.textContent = data.answer;
+              finalAnswer = data.answer;
+            }
+            renderSourcesInto(shell.sourcesHost, data.grounded, data.sources);
+          } else if (eventName === "error") {
+            shell.bubble.classList.remove("message__bubble--streaming");
+            showError(data.message || "에이전트 처리 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      // 성공 시에만 메모리 누적(무상태 멀티턴)
+      if (finalAnswer) {
+        agentHistory.push({ role: "user", content: question });
+        agentHistory.push({ role: "assistant", content: finalAnswer });
+        els.agentResetBtn.hidden = false;
+      }
+    } catch {
+      shell.wrap.remove();
+      showError("에이전트 요청에 실패했습니다.");
+    } finally {
+      setChatBusy(false);
+      els.questionInput.focus();
+    }
+  }
+
   els.bannerClose.addEventListener("click", hideError);
 
   els.pickFileBtn.addEventListener("click", () => els.fileInput.click());
@@ -428,7 +552,17 @@
       showError("질문을 입력하세요.");
       return;
     }
-    sendQuestion(question);
+    if (els.agentModeToggle && els.agentModeToggle.checked) {
+      sendAgentQuestion(question);
+    } else {
+      sendQuestion(question);
+    }
+  });
+
+  els.agentResetBtn.addEventListener("click", () => {
+    agentHistory = [];
+    els.agentResetBtn.hidden = true;
+    els.questionInput.focus();
   });
 
   loadDocuments();

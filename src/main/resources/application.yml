@@ -68,8 +68,13 @@ llm:
 
 agent:
   max-steps: 5
+  max-tool-calls: 10                # 전역 도구 호출 총량 상한(런어웨이 방지). 초과 시 도구 없이 강제 종결
   timeout-ms: 180000
-  provider-order: [groq, ollama]      # Groq 우선, 실패/비활성 시 ollama 폴백
+  provider-order: [groq, ollama]    # Groq 우선, 실패/비활성 시 ollama 폴백
+  max-history-turns: 6              # 멀티턴 메모리 상한
+  read-max-chunks: 6
+  read-max-chars: 4000
+  summarize-max-chars: 8000
 
 logging:
   level:
