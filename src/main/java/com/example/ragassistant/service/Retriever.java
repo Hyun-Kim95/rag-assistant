@@ -89,7 +89,7 @@ public class Retriever {
      */
     private List<SearchHit> retrieveVectorOnly(String question, int limit) {
         long tEmbed = System.nanoTime();
-        float[] queryVector = embeddingService.embed(question);
+        float[] queryVector = embeddingService.embedQuery(question);
         telemetry.recordEmbeddingMs(msSince(tEmbed));
 
         long tSearch = System.nanoTime();
@@ -108,7 +108,7 @@ public class Retriever {
      */
     private List<SearchHit> retrieveHybrid(String question, int vectorLimit, int lexicalLimit) {
         long tEmbed = System.nanoTime();
-        float[] queryVector = embeddingService.embed(question);
+        float[] queryVector = embeddingService.embedQuery(question);
         telemetry.recordEmbeddingMs(msSince(tEmbed));
 
         long tSearch = System.nanoTime();

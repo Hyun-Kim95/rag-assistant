@@ -64,7 +64,7 @@ class RetrieverTest {
      */
     @Test
     void retrieve_whenRerankDisabled_returnsCandidatesWithoutRerank() {
-        when(embeddingService.embed(anyString())).thenReturn(new float[]{0.1f});
+        when(embeddingService.embedQuery(anyString())).thenReturn(new float[]{0.1f});
         when(embeddingRepository.searchSimilar(any(), eq(10))).thenReturn(List.of(hitA, hitB));
 
         List<SearchHit> result = retriever(props(false)).retrieve("q");
@@ -78,7 +78,7 @@ class RetrieverTest {
      */
     @Test
     void retrieve_whenRerankEnabled_callsRerankerWithCandidates() {
-        when(embeddingService.embed(anyString())).thenReturn(new float[]{0.1f});
+        when(embeddingService.embedQuery(anyString())).thenReturn(new float[]{0.1f});
         when(embeddingRepository.searchSimilar(any(), eq(30))).thenReturn(List.of(hitA, hitB));
         when(reranker.rerank(eq("q"), eq(List.of(hitA, hitB)), eq(6))).thenReturn(List.of(hitB));
 
@@ -93,7 +93,7 @@ class RetrieverTest {
      */
     @Test
     void retrieve_whenRerankEnabledButNoCandidates_returnsEmpty() {
-        when(embeddingService.embed(anyString())).thenReturn(new float[]{0.1f});
+        when(embeddingService.embedQuery(anyString())).thenReturn(new float[]{0.1f});
         when(embeddingRepository.searchSimilar(any(), eq(30))).thenReturn(List.of());
 
         List<SearchHit> result = retriever(props(true)).retrieve("q");

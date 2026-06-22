@@ -44,7 +44,7 @@ public class VectorStoreService {
             // chunk 텍스트 DB 저장
             StoredChunk saved = chunkRepository.save(StoredChunk.fromChunk(chunk));
             // Ollama embedding
-            float[] vector = embeddingService.embed(saved.getContent());
+            float[] vector = embeddingService.embedDocument(saved.getContent());
             // pgvector 저장
             embeddingRepository.save(
                     saved.getId(),
@@ -70,7 +70,7 @@ public class VectorStoreService {
                     content
             );
             StoredChunk saved = chunkRepository.save(StoredChunk.fromChunk(chunk));
-            float[] vector = embeddingService.embed(saved.getContent());
+            float[] vector = embeddingService.embedDocument(saved.getContent());
             embeddingRepository.save(saved.getId(), vector, saved.getDocumentName());
         }
         return chunkContents.size();
