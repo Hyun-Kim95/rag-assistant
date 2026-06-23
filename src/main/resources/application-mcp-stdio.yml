@@ -1,0 +1,11 @@
+# mcp-stdio 프로파일: stdio MCP 서버 전용 오버라이드.
+# 활성: java -jar ... --spring.profiles.active=mcp-stdio
+spring:
+  main:
+    web-application-type: none    # Tomcat(8080) 미기동: stdio 프로세스가 웹서버를 띄우지 않음
+    banner-mode: "off"            # 배너가 stdout으로 새어 JSON-RPC를 오염시키지 않게
+  datasource:
+    hikari:
+      # 부팅 시 커넥션 강제 확보를 막아 DB 없이도 initialize/tools/list/ping 핸드셰이크 가능.
+      # (tools/call 실제 실행은 DB·Ollama 기동 전제)
+      initialization-fail-timeout: -1

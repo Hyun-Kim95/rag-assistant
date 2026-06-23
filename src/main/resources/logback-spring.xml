@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--
+      mcp-stdio 프로파일에서는 stdout이 JSON-RPC 전용이므로 모든 로그를 stderr로 보낸다.
+      그 외 프로파일은 Spring Boot 기본(콘솔=stdout) 동작을 그대로 유지한다.
+    -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProfile name="mcp-stdio">
+        <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+            <target>System.err</target>
+            <encoder>
+                <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="STDERR"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!mcp-stdio">
+        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+</configuration>

@@ -58,6 +58,54 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 
 `local` 프로필: Swagger http://localhost:8080/swagger-ui.html, debug API (`/api/debug/...`)
 
+## MCP Server (stdio)
+
+기존 RAG 도구 4종(`search_documents`·`list_documents`·`read_document`·`summarize_document`)을 [Model Context Protocol](https://modelcontextprotocol.io) 도구로 노출합니다. Claude Desktop·Cursor·Claude Code 같은 MCP 클라이언트에서 이 RAG 백엔드를 직접 호출해 **출처 포함 응답**을 받을 수 있습니다.
+
+- 전송: **stdio** (JSON-RPC 2.0 직접 구현, 외부 의존성 추가 0)
+- 격리: `mcp-stdio` 프로파일에서만 동작 — 기존 웹 동작에 영향 없음
+- 지원 메서드: `initialize` · `notifications/initialized` · `tools/list` · `tools/call` · `ping`
+- `initialize`/`tools/list`/`ping` 핸드셰이크는 **DB 없이도 동작**(`tools/call` 실제 실행만 DB·Ollama 기동 전제)
+- 기존 agent tool registry를 재사용해 MCP 전송·프로토콜 어댑터 계층만 추가
+
+**빌드 후 클라이언트 등록** (`claude_desktop_config.json`, Cursor `mcp.json` 등):
+
+```bash
+gradlew.bat bootJar   # build/libs/rag-assistant-0.0.1-SNAPSHOT.jar
+```
+
+```json
+{
+  "mcpServers": {
+    "rag-assistant": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "<repo>/build/libs/rag-assistant-0.0.1-SNAPSHOT.jar",
+        "--spring.profiles.active=mcp-stdio,local",
+        "--spring.config.additional-location=optional:file:<repo>/"
+      ]
+    }
+  }
+}
+```
+
+> **`<repo>`는 절대 경로로 치환**(예: `D:/cursor/rag-assistant`). MCP 클라이언트는 임의의 작업 디렉터리에서 jar를 실행하므로 jar·설정 경로 모두 절대 경로를 권장합니다.
+>
+> **`tools/call`(DB 의존)에 `,local` + `config.additional-location`이 필요한 이유:** DB 비밀번호는 git 제외 파일 `application-local.yml`(프로젝트 루트, `on-profile: local`)에 있습니다. `mcp-stdio` 단독 실행은 이 파일을 로드하지 않아 `Failed to obtain JDBC Connection`이 납니다. `,local`로 해당 프로파일을 켜고, `config.additional-location`으로 클라이언트 cwd와 무관하게 그 파일을 찾게 합니다. (`initialize`/`tools/list` 핸드셰이크만 볼 거면 `--spring.profiles.active=mcp-stdio`만으로 충분합니다.)
+>
+> stdout은 JSON-RPC 전용이며, 로그는 `logback-spring.xml`의 `mcp-stdio` 프로파일에서 stderr로 분리해 프로토콜 오염을 막습니다.
+
+**로컬 스모크 테스트** (DB 없이 핸드셰이크 확인, Windows `cmd`):
+
+```bat
+echo {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}> in.txt
+echo {"jsonrpc":"2.0","id":2,"method":"tools/list"}>> in.txt
+java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=mcp-stdio < in.txt
+```
+
+> DB 의존 도구(`list_documents`·`search_documents` 등)까지 스모크하려면 Postgres·Ollama 기동 후 위 jar 인자에 `,local`과 `--spring.config.additional-location=optional:file:<repo>/`를 더해 실행합니다.
+
 ## RAG 평가
 
 고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자동 측정**합니다.
