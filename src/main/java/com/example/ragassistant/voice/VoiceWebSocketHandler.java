@@ -1,9 +1,12 @@
 package com.example.ragassistant.voice;
 
+import com.example.ragassistant.agent.AgentOrchestrator;
+import com.example.ragassistant.agent.AgentStreamHandler;
 import com.example.ragassistant.domain.CallTurn;
+import com.example.ragassistant.dto.AgentResponse;
 import com.example.ragassistant.dto.ChatResponse;
+import com.example.ragassistant.dto.ConversationTurn;
 import com.example.ragassistant.repository.CallLogRepository;
-import com.example.ragassistant.service.RagService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -18,14 +21,16 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
- * 음성 통화 WebSocket 핸들러 (단계 1: 브라우저 STT/TTS, 서버는 텍스트→RAG 중계).
+ * 음성 통화 WebSocket 핸들러: 브라우저 STT/TTS, 서버는 텍스트→tool calling agent(멀티턴) 중계.
  * 수신(JSON): {type:"user_utterance", text:"...", sttMs:n} | {type:"barge_in"}
  * 송신: VoiceEvent (state / answer.delta / answer.done / handoff / error) + 오디오 바이너리
- * 부가: 통화 세션·턴 로그(PII 마스킹) + 구간 지연 기록.
+ * 부가: 세션 단위 대화 메모리(멀티턴) + 통화 세션·턴 로그(PII 마스킹) + 구간 지연 기록.
  */
 @Component
 public class VoiceWebSocketHandler extends TextWebSocketHandler {
@@ -36,9 +41,10 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     private static final String ATTR_TURN_INDEX = "turnIndex";
     private static final String ATTR_FINAL_STATE = "finalState";
     private static final String ATTR_HANDOFF_REASON = "handoffReason";
+    private static final String ATTR_HISTORY = "history";
     private static final int HANDOFF_NO_ANSWER_THRESHOLD = 2;
 
-    private final RagService ragService;
+    private final AgentOrchestrator agentOrchestrator;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor;
     private final GoogleTtsService googleTtsService;
@@ -46,11 +52,11 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     private final PiiMasker piiMasker;
 
     // agentStreamExecutor(cached pool) 재사용 — 통화 턴 처리를 수신 스레드와 분리.
-    public VoiceWebSocketHandler(RagService ragService, ObjectMapper objectMapper,
+    public VoiceWebSocketHandler(AgentOrchestrator agentOrchestrator, ObjectMapper objectMapper,
                                  @Qualifier("agentStreamExecutor") ExecutorService executor,
                                  GoogleTtsService googleTtsService,
                                  CallLogRepository callLogRepository, PiiMasker piiMasker) {
-        this.ragService = ragService;
+        this.agentOrchestrator = agentOrchestrator;
         this.objectMapper = objectMapper;
         this.executor = executor;
         this.googleTtsService = googleTtsService;
@@ -66,6 +72,7 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         session.getAttributes().put(ATTR_NO_ANSWER_STREAK, 0);
         session.getAttributes().put(ATTR_TURN_INDEX, 0);
+        session.getAttributes().put(ATTR_HISTORY, new ArrayList<ConversationTurn>());
         try {
             Long sessionId = callLogRepository.createSession(LocalDateTime.now());
             session.getAttributes().put(ATTR_SESSION_ID, sessionId);
@@ -118,12 +125,7 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
             try {
                 final long llmStart = System.nanoTime();
                 final long[] firstDeltaNanos = {0L};
-                ChatResponse response = ragService.streamAnswer(text, piece -> {
-                    if (firstDeltaNanos[0] == 0L) {
-                        firstDeltaNanos[0] = System.nanoTime();
-                    }
-                    send(session, VoiceEvent.delta(piece));
-                });
+                ChatResponse response = answerWithAgent(session, text, firstDeltaNanos);
                 long llmMs = msSince(llmStart);
                 long ttfbMs = firstDeltaNanos[0] > 0L
                         ? (firstDeltaNanos[0] - t0) / 1_000_000L
@@ -147,6 +149,67 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
                 send(session, VoiceEvent.state(CallState.LISTENING));
             }
         });
+    }
+
+    /**
+     * tool calling agent(멀티턴) 호출: 세션 대화 이력을 함께 넘겨 후속 질문도 맥락을 잇는다.
+     * delta는 자막으로 흘리고 결과를 ChatResponse로 변환한다. 턴 종료 후 이력에 user/assistant를 누적한다.
+     * (도구 호출 step은 음성에서 노출하지 않고, 자막은 최종 답 delta만 흘린다.)
+     */
+    @SuppressWarnings("unchecked")
+    private ChatResponse answerWithAgent(WebSocketSession session, String text, long[] firstDeltaNanos) {
+        List<ConversationTurn> history = (List<ConversationTurn>) session.getAttributes()
+                .computeIfAbsent(ATTR_HISTORY, k -> new ArrayList<ConversationTurn>());
+        final boolean[] noticed = {false};      // 턴당 1회만 안내(filler)
+        AgentStreamHandler handler = new AgentStreamHandler() {
+            @Override
+            public void onToolCall(int index, String tool, Map<String, Object> arguments) {
+                // 문서를 실제로 뒤지는 도구를 처음 호출할 때, 본 답변 전에 짧게 안내한다.
+                // (list_documents는 즉답성이라 제외) → "찾아볼게요" 후 답하는 자연스러움 + 지연 체감 완화.
+                if (!noticed[0] && tool != null
+                        && (tool.contains("search") || tool.contains("read") || tool.contains("summarize"))) {
+                    noticed[0] = true;
+                    speakNotice(session);
+                }
+            }
+
+            @Override
+            public void onToolResult(int index, String tool, String resultSummary) {
+            }
+
+            @Override
+            public void onDelta(String piece) {
+                if (firstDeltaNanos[0] == 0L) {
+                    firstDeltaNanos[0] = System.nanoTime();
+                }
+                send(session, VoiceEvent.delta(piece));
+            }
+        };
+        AgentResponse agentResponse = agentOrchestrator.runStreaming(text, null, history, handler);
+        // no-answer(grounded=false) 턴은 이력에 남기지 않는다.
+        // 약한 모델이 직전 "찾을 수 없습니다" 답에 앵커링해 다음 질문까지 no-answer로 끌고 가는 오염을 막는다.
+        if (agentResponse.grounded()) {
+            history.add(new ConversationTurn("user", text));
+            history.add(new ConversationTurn("assistant", agentResponse.answer()));
+        }
+        return new ChatResponse(agentResponse.answer(), agentResponse.sources(),
+                agentResponse.grounded(), agentResponse.provider());
+    }
+
+    private static final String FILLER_TEXT = "네, 문서에서 찾아볼게요. 잠시만요.";
+
+    /**
+     * 검색 시작 안내(filler): 자막 + 본 답변과 같은 음색(Google TTS)으로 먼저 들려준다.
+     * Google 비활성/실패 시에만 브라우저 TTS로 강등(이 경우 본 답변도 브라우저 TTS라 음색은 일관).
+     */
+    private void speakNotice(WebSocketSession session) {
+        send(session, VoiceEvent.notice(FILLER_TEXT));
+        byte[] audio = googleTtsService.synthesize(FILLER_TEXT);
+        if (audio != null) {
+            sendAudio(session, audio);
+        } else {
+            send(session, VoiceEvent.ttsFallback(FILLER_TEXT));
+        }
     }
 
     /**

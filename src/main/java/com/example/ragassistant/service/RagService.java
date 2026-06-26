@@ -117,7 +117,7 @@ public class RagService {
      * LLM 답변 정제: no-answer 잔여 태그, 한자 누출(```korean 재작성·중국어 메타 줄),
      * 프롬프트 라벨·Context 메타 줄을 제거한다.
      */
-    static String sanitizeLlmAnswer(String answer) {
+    public static String sanitizeLlmAnswer(String answer) {
         if (!StringUtils.hasText(answer)) {
             return answer;
         }

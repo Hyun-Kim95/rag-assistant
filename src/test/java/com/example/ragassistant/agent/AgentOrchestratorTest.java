@@ -99,6 +99,51 @@ class AgentOrchestratorTest {
     }
 
     @Test
+    @DisplayName("검색 예고 재촉 — list 후 '검색하겠다'만 하고 끝내려 하면 1회 재촉해 실제 search 유도")
+    void nudgesWhenPreviewsSearchWithoutCalling() {
+        when(toolRegistry.specs()).thenReturn(List.of());
+        ToolCall list = new ToolCall("c1", "list_documents", "{}");
+        ToolCall search = new ToolCall("c2", "search_documents", "{\"query\":\"기술 스택\"}");
+        when(agentChatClient.chat(anyList(), anyList(), any()))
+                .thenReturn(
+                        new AgentTurn("ollama", "", List.of(list)),                       // step1: 목록 확인
+                        new AgentTurn("ollama", "이 문서를 검색해보겠습니다.", List.of()),    // step2: 예고만 → 재촉
+                        new AgentTurn("ollama", "", List.of(search)),                     // step3: 실제 검색
+                        new AgentTurn("ollama", "기술 스택은 Spring Boot입니다.", List.of())); // step4: 최종 답
+        when(toolRegistry.execute(eq("list_documents"), any()))
+                .thenReturn(new ToolResult("ARCHITECTURE.md", List.of()));
+        SourceCitation src = new SourceCitation("ARCHITECTURE.md", 42L, "근거", 1.0);
+        when(toolRegistry.execute(eq("search_documents"), any()))
+                .thenReturn(new ToolResult("검색 본문", List.of(src)));
+
+        AgentResponse res = orchestrator(props(6)).run("이 프로젝트 기술 스택 알려줘", "groq");
+
+        assertThat(res.stopReason()).isEqualTo("FINAL");
+        assertThat(res.answer()).isEqualTo("기술 스택은 Spring Boot입니다.");
+        assertThat(res.grounded()).isTrue();
+        assertThat(res.steps()).extracting(AgentStep::tool).contains("search_documents");
+        verify(toolRegistry).execute(eq("search_documents"), any());
+    }
+
+    @Test
+    @DisplayName("도구 호출 원문 흉내 — 재촉 후에도 텍스트면 원문 대신 안내문으로 종결")
+    void toolCallEchoNotLeakedToUser() {
+        when(toolRegistry.specs()).thenReturn(List.of());
+        // 폴백 모델이 도구를 호출하지 않고 본문에 호출 원문만 두 번 흉내 → 사용자에 노출 금지
+        when(agentChatClient.chat(anyList(), anyList(), any()))
+                .thenReturn(
+                        new AgentTurn("ollama", "search_documents {\"query\": \"PG 벡터\"}", List.of()),
+                        new AgentTurn("ollama", "search_documents {\"query\": \"PG 벡터 이유\"}", List.of()));
+
+        AgentResponse res = orchestrator(props(6)).run("PG 벡터 대신 크로마를 쓰지 않은 이유", "groq");
+
+        assertThat(res.stopReason()).isEqualTo("FINAL");
+        assertThat(res.answer()).doesNotContain("search_documents");
+        assertThat(res.answer()).contains("찾지 못했습니다");
+        assertThat(res.grounded()).isFalse();
+    }
+
+    @Test
     @DisplayName("멀티턴 — 이전 대화가 현재 user 앞에 시드된다")
     @SuppressWarnings("unchecked")
     void multiTurnMemorySeeded() {

@@ -106,6 +106,26 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 
 > DB 의존 도구(`list_documents`·`search_documents` 등)까지 스모크하려면 Postgres·Ollama 기동 후 위 jar 인자에 `,local`과 `--spring.config.additional-location=optional:file:<repo>/`를 더해 실행합니다.
 
+## Voice RAG (음성 콜봇)
+
+> 브라우저 마이크 → 실시간 STT → tool calling agent(멀티턴·RAG) → TTS 음성 응답.
+> 못 풀면 **상담원 전환(handoff)**, 통화는 **구간별 지연·PII 마스킹** 로그로 남습니다.
+
+기존 RAG·tool-calling 자산을 음성·실시간 도메인으로 확장한 PoC입니다. 신규는 WebSocket Voice Gateway(`/ws/voice`) 하나이며 agent·RAG·DB는 그대로 재사용합니다.
+
+- **멀티턴:** 세션 대화 이력 유지 → 후속 질문("그게 다인가요") 맥락 연결(agent 경유)
+- **상태머신:** `IDLE→LISTENING→THINKING→SPEAKING→(HANDOFF)` + 상태별 UI(로딩/빈/오류/권한)
+- **상담원 전환:** `grounded=false` 2회 연속 → 환각 대신 handoff
+- **수치화:** 턴별 `stt_ms/llm_ms/tts_ms/ttfb_ms`를 `call_turns`에 적재 → 병목 분석
+- **개인정보 마스킹:** 전화/이메일/주민·카드번호를 마스킹 후 저장(`user_text_masked`)
+- **폴백:** LLM(Groq→Ollama)·TTS(Google→브라우저)·STT(클라우드→브라우저)
+
+**실행:** RAG 환경 기동 후 `gradlew.bat bootRun` → http://localhost:8080/voice.html  
+(STT는 **Chrome/Edge** 권장, LLM은 `llm.default-provider: groq` 권장. Google TTS 미설정 시 브라우저 TTS 폴백.)  
+`call_sessions`·`call_turns`는 앱 시작 시 `schema.sql`로 자동 생성됩니다(`IF NOT EXISTS`).
+
+WebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)
+
 ## RAG 평가
 
 고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자동 측정**합니다.

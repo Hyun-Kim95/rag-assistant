@@ -92,9 +92,10 @@ public class OllamaAgentClient implements AgentChatClient {
             if ("assistant".equals(m.role()) && m.toolCalls() != null && !m.toolCalls().isEmpty()) {
                 List<Map<String, Object>> tcs = new ArrayList<>();
                 for (ToolCall tc : m.toolCalls()) {
-                    tcs.add(Map.of("function", Map.of(
-                            "name", tc.name(),
-                            "arguments", parseArgsToObject(tc.argumentsJson()))));  // Ollama: arguments=객체
+                    Map<String, Object> fn = new LinkedHashMap<>();
+                    fn.put("name", tc.name() != null ? tc.name() : "");
+                    fn.put("arguments", parseArgsToObject(tc.argumentsJson()));    // Ollama: arguments=객체
+                    tcs.add(Map.of("function", fn));
                 }
                 wire.put("tool_calls", tcs);
             }
@@ -117,8 +118,13 @@ public class OllamaAgentClient implements AgentChatClient {
     }
 
     private Object parseArgsToObject(String argumentsJson) {
+        // readValue("null"/null/"")은 null을 돌려줄 수 있어 Map.of(value=null) NPE를 유발 → 빈 맵으로 정규화
+        if (argumentsJson == null || argumentsJson.isBlank()) {
+            return Map.of();
+        }
         try {
-            return objectMapper.readValue(argumentsJson, Map.class);
+            Object parsed = objectMapper.readValue(argumentsJson, Map.class);
+            return parsed != null ? parsed : Map.of();
         } catch (Exception e) {
             return Map.of();
         }
@@ -141,6 +147,13 @@ public class OllamaAgentClient implements AgentChatClient {
                         : fn.path("arguments").toString();   // 객체 → 문자열로 정규화
                 toolCalls.add(new ToolCall("call_" + i, fn.path("name").asText(""), argsJson));
                 i++;
+            }
+        }
+        // tool_calls 필드가 비고 content에 도구 호출 JSON만 흘린 경우 → 실제 호출로 승격(raw 노출 방지).
+        if (toolCalls.isEmpty() && content != null && !content.isBlank()) {
+            List<ToolCall> recovered = ToolCallEcho.recover(content, objectMapper);
+            if (!recovered.isEmpty()) {
+                return new AgentTurn(name, "", recovered);
             }
         }
         return new AgentTurn(name, content, toolCalls);

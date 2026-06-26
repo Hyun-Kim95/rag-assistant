@@ -1,10 +1,11 @@
 package com.example.ragassistant.voice;
 
+import com.example.ragassistant.agent.AgentOrchestrator;
+import com.example.ragassistant.agent.AgentStreamHandler;
 import com.example.ragassistant.domain.CallTurn;
-import com.example.ragassistant.dto.ChatResponse;
+import com.example.ragassistant.dto.AgentResponse;
 import com.example.ragassistant.dto.SourceCitation;
 import com.example.ragassistant.repository.CallLogRepository;
-import com.example.ragassistant.service.RagService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,14 +32,14 @@ import static org.mockito.Mockito.when;
 
 /**
  * VoiceWebSocketHandler 수용 기준 검증 (DB·LLM·브라우저 없이 Mockito로 결정적).
- * RagService.streamAnswer를 스크립트해 delta·최종 ChatResponse를 흉내내고,
+ * AgentOrchestrator.runStreaming을 스크립트해 delta·최종 AgentResponse를 흉내내고,
  * WebSocketSession 송신을 캡처해 VoiceEvent(JSON)를 검증한다.
  */
 @ExtendWith(MockitoExtension.class)
 class VoiceWebSocketHandlerTest {
 
     @Mock
-    RagService ragService;
+    AgentOrchestrator agentOrchestrator;
     @Mock
     WebSocketSession session;
     @Mock
@@ -86,7 +86,7 @@ class VoiceWebSocketHandlerTest {
                 return true;
             }
         };
-        handler = new VoiceWebSocketHandler(ragService, objectMapper, syncExecutor, googleTtsService,
+        handler = new VoiceWebSocketHandler(agentOrchestrator, objectMapper, syncExecutor, googleTtsService,
                 callLogRepository, piiMasker);
 
         attributes = new HashMap<>();
@@ -115,14 +115,22 @@ class VoiceWebSocketHandlerTest {
     }
 
     /**
-     * streamAnswer 스텁: delta(있으면) 방출 후 주어진 ChatResponse 반환
+     * runStreaming 스텁: delta(있으면) 방출 후 주어진 AgentResponse 반환
      */
-    private void stubAnswer(String delta, ChatResponse response) {
-        when(ragService.streamAnswer(any(), any())).thenAnswer(inv -> {
-            Consumer<String> onDelta = inv.getArgument(1);
-            if (delta != null) onDelta.accept(delta);
+    private void stubAnswer(String delta, AgentResponse response) {
+        when(agentOrchestrator.runStreaming(any(), any(), any(), any())).thenAnswer(inv -> {
+            AgentStreamHandler h = inv.getArgument(3);
+            if (delta != null) h.onDelta(delta);
             return response;
         });
+    }
+
+    private static AgentResponse grounded(String answer, SourceCitation source) {
+        return new AgentResponse(answer, List.of(source), true, "groq", "FINAL", List.of());
+    }
+
+    private static AgentResponse noAnswer(String answer) {
+        return new AgentResponse(answer, List.of(), false, null, "FINAL", List.of());
     }
 
     private List<JsonNode> events() {
@@ -157,13 +165,13 @@ class VoiceWebSocketHandlerTest {
         // Google STT 도입 시 서버 STT 이벤트로 자동화 전환.
     }
 
-    // --- RAG 연결 ---
+    // --- agent 연결 (멀티턴 tool calling) ---
     @Test
     @DisplayName("user_utterance → answer.delta 수신 + answer.done에 grounded·sources 포함")
-    void ragConnected() throws Exception {
+    void agentConnected() throws Exception {
         stubAnswer("환불은 ",
-                new ChatResponse("환불은 14일 이내 신청.",
-                        List.of(new SourceCitation("faq.md", 837L, "## 환불 정책", 0.99)), true));
+                grounded("환불은 14일 이내 신청.",
+                        new SourceCitation("faq.md", 837L, "## 환불 정책", 0.99)));
 
         utter("환불 정책 알려줘");
 
@@ -181,9 +189,7 @@ class VoiceWebSocketHandlerTest {
     @Test
     @DisplayName("grounded 답변 후 SPEAKING으로 전이 (실제 재생·LISTENING 복귀는 브라우저 manual)")
     void speakingTransition() throws Exception {
-        stubAnswer("답변",
-                new ChatResponse("답변입니다.",
-                        List.of(new SourceCitation("doc.md", 1L, "...", 0.9)), true));
+        stubAnswer("답변", grounded("답변입니다.", new SourceCitation("doc.md", 1L, "...", 0.9)));
 
         utter("질문");
 
@@ -195,7 +201,7 @@ class VoiceWebSocketHandlerTest {
     @Test
     @DisplayName("검색 hit 없음 → answer.done grounded=false, 1회차는 handoff 아님(통화 계속)")
     void noAnswerKeepsCall() throws Exception {
-        stubAnswer(null, ChatResponse.noAnswer("문서에서 확인할 수 없는 질문입니다."));
+        stubAnswer(null, noAnswer("문서에서 확인할 수 없는 질문입니다."));
 
         utter("2025년 매출 알려줘");
 
@@ -207,11 +213,51 @@ class VoiceWebSocketHandlerTest {
         assertThat(states()).contains("SPEAKING");
     }
 
+    // --- 멀티턴 메모리: 2번째 발화에 이전 대화 이력이 전달되는지 ---
+    @Test
+    @DisplayName("두 번째 발화 시 runStreaming에 직전 user/assistant 이력이 함께 전달")
+    void multiturnHistoryPassed() throws Exception {
+        stubAnswer("답", grounded("기술 스택은 Spring Boot 입니다.",
+                new SourceCitation("README.md", 1L, "스택", 0.9)));
+
+        utter("기술 스택 알려줘");
+        utter("그게 다인가요");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<com.example.ragassistant.dto.ConversationTurn>> historyCaptor =
+                ArgumentCaptor.forClass(List.class);
+        // 2회 호출 → 마지막(2번째) 호출 시점의 history에는 1턴(user+assistant)이 들어 있어야 함
+        verify(agentOrchestrator, org.mockito.Mockito.times(2))
+                .runStreaming(any(), any(), historyCaptor.capture(), any());
+        List<com.example.ragassistant.dto.ConversationTurn> historyAtSecondCall = historyCaptor.getAllValues().get(1);
+        assertThat(historyAtSecondCall).extracting(com.example.ragassistant.dto.ConversationTurn::role)
+                .contains("user", "assistant");
+        assertThat(historyAtSecondCall).extracting(com.example.ragassistant.dto.ConversationTurn::content)
+                .contains("기술 스택 알려줘");
+    }
+
+    @Test
+    @DisplayName("no-answer 턴은 이력에 쌓이지 않아 다음 발화를 오염시키지 않는다")
+    void noAnswerTurnNotKeptInHistory() throws Exception {
+        stubAnswer(null, noAnswer("문서에서 확인할 수 없는 질문입니다."));
+
+        utter("환불 정책 알려줘");    // no-answer → 이력에 남기면 안 됨
+        utter("청크 사이즈 알려줘");   // 직전 no-answer에 오염되지 않아야 함
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<com.example.ragassistant.dto.ConversationTurn>> historyCaptor =
+                ArgumentCaptor.forClass(List.class);
+        verify(agentOrchestrator, org.mockito.Mockito.times(2))
+                .runStreaming(any(), any(), historyCaptor.capture(), any());
+        // 첫 턴이 no-answer라 이력에 쌓이지 않으므로, 두 번째 호출 시점 history는 비어 있어야 한다.
+        assertThat(historyCaptor.getAllValues().get(1)).isEmpty();
+    }
+
     // --- 마스킹 저장 ---
     @Test
     @DisplayName("턴 종료 시 user_text_masked에 PII(전화번호)가 마스킹되어 저장")
     void maskedPersistence() throws Exception {
-        stubAnswer(null, ChatResponse.noAnswer("문서에서 확인할 수 없는 질문입니다."));
+        stubAnswer(null, noAnswer("문서에서 확인할 수 없는 질문입니다."));
 
         utter("내 번호는 010-1234-5678 입니다");
 
@@ -226,8 +272,7 @@ class VoiceWebSocketHandlerTest {
     @Test
     @DisplayName("턴 종료 시 stt_ms/llm_ms/tts_ms/ttfb_ms가 모두 0 이상 기록(stt_ms는 클라값 보존)")
     void latencyMetrics() throws Exception {
-        stubAnswer("부분", new ChatResponse("답변입니다.",
-                List.of(new SourceCitation("doc.md", 1L, "...", 0.9)), true));
+        stubAnswer("부분", grounded("답변입니다.", new SourceCitation("doc.md", 1L, "...", 0.9)));
 
         utter("질문 내용입니다", 120);
 

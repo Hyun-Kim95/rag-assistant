@@ -11,7 +11,9 @@ import com.example.ragassistant.llm.agent.AgentChatClient;
 import com.example.ragassistant.llm.agent.AgentMessage;
 import com.example.ragassistant.llm.agent.AgentTurn;
 import com.example.ragassistant.llm.agent.ToolCall;
+import com.example.ragassistant.llm.agent.ToolCallEcho;
 import com.example.ragassistant.llm.agent.ToolSpec;
+import com.example.ragassistant.service.RagService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -49,16 +51,19 @@ public class AgentOrchestrator {
             - 문서 내용을 묻는 질문: 먼저 search_documents 로 검색한다.
             - summarize_document·read_document 는 사용자가 특정 문서를 지목해 요약/상세를 요청할 때만, 그 문서 하나에 대해 호출한다. 모든 문서를 자동으로 요약하지 않는다.
             - 충분한 결과를 얻으면 더 이상 도구를 호출하지 말고 바로 답한다. 같은 도구를 같은 인자로 반복 호출하지 않는다.
+            - "검색하겠습니다/확인해보겠습니다" 같은 예고 문장만 적고 답을 끝내지 않는다. 검색이 필요하면 말로 예고하지 말고 즉시 search_documents 도구를 호출한다.
 
             [작성 규칙]
             - 검색/읽기 결과에 '실제로 나온 내용'만 사용하고, 없는 사실을 지어내지 않는다.
             - 근거가 없으면 "관련 내용을 찾을 수 없습니다"라고 솔직히 답한다. (단, 문서 목록 질문은 list_documents 결과로 답하면 된다.)
-            - 간결한 한국어로 쓰고, 같은 문장을 반복하지 않으며, 불필요한 영어·중국어를 섞지 않는다.
+            - 반드시 한국어로만 답한다. 어떤 경우에도 중국어 문장이나 한자 단어를 쓰지 않는다. 영어는 제품·기술 고유명사(예: Spring Boot, pgvector)에만 쓰고 설명 문장은 한국어로 쓴다.
+            - 검색 결과를 그대로 옮기지 말고 질문에 답하는 형태로 한국어로 정리한다. 같은 문장을 반복하지 않는다.
             """;
 
     private static final String TOOL_BUDGET_FALLBACK = "여러 번 도구를 사용했지만 답을 마무리하지 못했습니다. 질문을 더 구체적으로 다시 시도해 주세요.";
     private static final String MAX_STEPS_FALLBACK = "단계 한도에 도달해 답을 마무리하지 못했습니다. 질문을 더 구체적으로 다시 시도해 주세요.";
     private static final String TIMEOUT_FALLBACK = "처리 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.";
+    private static final String NO_TOOL_ECHO_FALLBACK = "관련 내용을 찾지 못했습니다. 질문을 조금 더 구체적으로 말씀해 주세요.";
     /**
      * 모델이 '근거 없음'으로 답했는지 가늠하는 힌트(공백 제거 후 부분일치). no-answer면 출처를 비운다.
      */
@@ -111,6 +116,7 @@ public class AgentOrchestrator {
         String usedProvider = null;
         int toolCalls = 0;
         boolean budgetHit = false;
+        boolean nudgedToSearch = false;     // 검색을 안 하고 예고만 하는 모델(주로 폴백)을 1회 재촉
 
         for (int step = 1; step <= props.maxSteps() && !budgetHit; step++) {
             if (System.currentTimeMillis() > deadline) {
@@ -121,8 +127,21 @@ public class AgentOrchestrator {
             usedProvider = turn.provider();
 
             if (!turn.hasToolCalls()) {
-                emitDeltas(handler, turn.content());                // 최종 답을 조각내어 흘림
-                return finalize(turn.content(), sourcesByChunk, usedProvider, "FINAL", steps);
+                boolean toolEcho = looksLikeToolCallEcho(turn.content());
+                // 약한 폴백 모델이 (1) '검색하겠다'는 예고만 남기거나 (2) 도구 호출을 실제 호출이 아닌
+                // 'search_documents {...}' 텍스트로 흉내내고 끝내는 경우, 한 번만 재촉해 실제 호출을 유도한다.
+                if (!nudgedToSearch && (toolEcho || (!alreadySearched(steps) && looksLikeSearchPreview(turn.content())))) {
+                    nudgedToSearch = true;
+                    conv.add(AgentMessage.assistant(turn.content(), null));
+                    conv.add(AgentMessage.user(
+                            "도구 이름을 글로 적지 말고, 도구 호출 기능으로 직접 search_documents 를 호출해 실제로 검색하세요. "
+                                    + "결과가 있으면 그 내용으로 한국어로 답하고, 없으면 솔직히 모른다고 답하세요."));
+                    continue;
+                }
+                // 재촉 후에도 도구 호출 원문만 내놓으면, 그 원문을 사용자에게 노출하지 않고 안내로 대체한다.
+                String answer = toolEcho ? NO_TOOL_ECHO_FALLBACK : RagService.sanitizeLlmAnswer(turn.content());
+                emitDeltas(handler, answer);                        // 최종 답을 조각내어 흘림
+                return finalize(answer, sourcesByChunk, usedProvider, "FINAL", steps);
             }
 
             conv.add(AgentMessage.assistant(turn.content(), turn.toolCalls()));
@@ -171,7 +190,7 @@ public class AgentOrchestrator {
                     "도구를 더 호출하지 말고, 지금까지 수집한 정보만으로 한국어로 답하세요. 정보가 부족하면 솔직히 모른다고 답하세요."));
             AgentTurn turn = agentChatClient.chat(conv, List.of(), provider);   // tools 없음 → 강제 종결
             answer = StringUtils.hasText(turn.content())
-                    ? turn.content()
+                    ? RagService.sanitizeLlmAnswer(turn.content())
                     : ("TOOL_BUDGET".equals(reason) ? TOOL_BUDGET_FALLBACK : MAX_STEPS_FALLBACK);
         } catch (Exception e) {
             log.warn("강제 종결 응답 실패: {}", e.toString());
@@ -239,6 +258,42 @@ public class AgentOrchestrator {
         List<SourceCitation> sourceList = noAnswer ? List.of() : new ArrayList<>(sources.values());
         boolean grounded = !sourceList.isEmpty();
         return new AgentResponse(answer, sourceList, grounded, provider, stopReason, steps);
+    }
+
+    /**
+     * 검색 계열 도구를 한 번이라도 실제로 호출했는지.
+     */
+    private static boolean alreadySearched(List<AgentStep> steps) {
+        return steps.stream().anyMatch(s -> s.tool() != null && s.tool().contains("search"));
+    }
+
+    private static final List<String> SEARCH_PREVIEW_HINTS = List.of(
+            "검색해보겠", "검색하겠", "검색할", "찾아보겠", "찾아볼", "확인해보겠", "확인하겠");
+
+    /**
+     * '검색/확인하겠다'는 예고로 보이는 응답인지(공백 제거 후 부분일치).
+     */
+    private static boolean looksLikeSearchPreview(String content) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        String compact = content.replaceAll("\\s+", "");
+        return SEARCH_PREVIEW_HINTS.stream().anyMatch(compact::contains);
+    }
+
+    /**
+     * 약한 모델이 tool_calls 대신 본문에 'search_documents {...}'처럼 도구 호출을 글로 흉내냈는지.
+     * 도구명으로 시작하고 뒤에 인자 괄호/중괄호가 붙는 형태를 본다(코드펜스·따옴표는 무시).
+     */
+    private static boolean looksLikeToolCallEcho(String content) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        if (ToolCallEcho.contains(content)) {       // 본문 어디든 '{"name":"<도구>", ...}' JSON 흉내
+            return true;
+        }
+        String t = content.strip().replaceAll("^`+|`+$", "").strip();
+        return t.matches("(?s)^(search_documents|list_documents|read_document|summarize_document)\\s*[{(\\[\"].*");
     }
 
     /**

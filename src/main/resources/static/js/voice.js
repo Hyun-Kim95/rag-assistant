@@ -23,6 +23,7 @@
     let sttBlocked = false;   // STT가 환경적으로 불가(network/권한) → 재시작 루프 차단
     let currentAnswerEl = null;
     let currentAudio = null;
+    let awaitingAnswer = false;   // THINKING~answer.done 사이: 오디오(filler)가 끝나도 LISTENING 대신 THINKING 유지
 
     function setState(s) {
         els.state.textContent = s;
@@ -58,16 +59,23 @@
         switch (ev.event) {
             case "state":
                 setState(ev.state);
+                if (ev.state === "THINKING") awaitingAnswer = true;
                 break;
             case "answer.delta":
                 if (!currentAnswerEl) currentAnswerEl = appendMsg("assistant", "");
                 currentAnswerEl.textContent += ev.text;
                 break;
             case "answer.done":
+                awaitingAnswer = false;   // 본 답 도착 → 이후 오디오가 끝나면 LISTENING으로
                 if (!currentAnswerEl) currentAnswerEl = appendMsg("assistant", "");
                 currentAnswerEl.textContent = ev.answer || currentAnswerEl.textContent;
                 currentAnswerEl = null;
                 // 재생은 tts.audio(바이너리) 또는 tts.fallback에서 처리
+                break;
+            case "notice":
+                // 검색 시작 안내(filler): 자막만 표시. 음성은 서버가 본 답변과 같은 엔진으로
+                // 보낸다(Google TTS 바이너리, 또는 비활성 시 tts.fallback → 브라우저 TTS).
+                appendMsg("system", ev.text);
                 break;
             case "tts.fallback":
                 speak(ev.text);   // Google 비활성/실패 → 브라우저 TTS 강등
@@ -156,10 +164,10 @@
         currentAudio.onended = () => {
             speaking = false; currentAudio = null;
             URL.revokeObjectURL(url);
-            setState("LISTENING");
+            setState(awaitingAnswer ? "THINKING" : "LISTENING");
         };
-        currentAudio.onerror = () => { speaking = false; currentAudio = null; setState("LISTENING"); };
-        currentAudio.play().catch(() => { speaking = false; setState("LISTENING"); });
+        currentAudio.onerror = () => { speaking = false; currentAudio = null; setState(awaitingAnswer ? "THINKING" : "LISTENING"); };
+        currentAudio.play().catch(() => { speaking = false; setState(awaitingAnswer ? "THINKING" : "LISTENING"); });
     }
 
     function stopPlayback() {
@@ -174,7 +182,7 @@
         const u = new SpeechSynthesisUtterance(clean);
         u.lang = "ko-KR";
         u.onstart = () => { speaking = true; };
-        u.onend = () => { speaking = false; setState("LISTENING"); };
+        u.onend = () => { speaking = false; setState(awaitingAnswer ? "THINKING" : "LISTENING"); };
         window.speechSynthesis.speak(u);
     }
 

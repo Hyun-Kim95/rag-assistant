@@ -45,4 +45,11 @@ public record VoiceEvent(
     public static VoiceEvent ttsFallback(String text) {
         return new VoiceEvent("tts.fallback", text, null, null, null, null, null, null, null);
     }
+
+    /**
+     * 검색 등 처리 시작을 알리는 짧은 안내(filler). 본 답변 전에 먼저 들려준다.
+     */
+    public static VoiceEvent notice(String text) {
+        return new VoiceEvent("notice", text, null, null, null, null, null, null, null);
+    }
 }

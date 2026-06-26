@@ -5,6 +5,8 @@ import com.example.ragassistant.exception.LlmResponseException;
 import com.example.ragassistant.exception.LlmUnavailableException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -24,6 +26,8 @@ import java.util.Map;
  */
 @Service
 public class OpenAiCompatAgentClient implements AgentChatClient {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenAiCompatAgentClient.class);
 
     private final RestClient client;
     private final OpenAiCompatProperties props;
@@ -68,6 +72,8 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
         } catch (ResourceAccessException ex) {
             throw new LlmUnavailableException("agent provider 연결 불가: " + name(), ex);
         } catch (HttpStatusCodeException ex) {
+            // 4xx는 요청 형식 문제일 수 있어 응답 body를 남겨 원인 진단을 돕는다(키 등 민감정보는 body에 없음).
+            log.warn("agent provider HTTP {} body={}", ex.getStatusCode().value(), ex.getResponseBodyAsString());
             throw new LlmResponseException(
                     "agent provider HTTP 오류: " + name() + " status=" + ex.getStatusCode().value(), ex);
         }
@@ -93,9 +99,14 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
         for (AgentMessage m : messages) {
             Map<String, Object> wire = new LinkedHashMap<>();
             wire.put("role", m.role());
-            // assistant가 tool만 호출하면 content가 null일 수 있다 → 빈 문자열로 안전화
-            wire.put("content", m.content() != null ? m.content() : "");
-            if ("assistant".equals(m.role()) && m.toolCalls() != null && !m.toolCalls().isEmpty()) {
+            boolean assistantToolCalls = "assistant".equals(m.role())
+                    && m.toolCalls() != null && !m.toolCalls().isEmpty();
+            if (assistantToolCalls) {
+                // OpenAI/Groq 규약: tool_calls가 있으면 content는 생략(null) 가능.
+                // 빈 문자열 content는 일부 provider(Groq)가 400으로 거부 → 내용이 있을 때만 싣는다.
+                if (StringUtils.hasText(m.content())) {
+                    wire.put("content", m.content());
+                }
                 List<Map<String, Object>> tcs = new ArrayList<>();
                 for (ToolCall tc : m.toolCalls()) {
                     tcs.add(Map.of(
@@ -106,6 +117,9 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
                                     "arguments", tc.argumentsJson())));  // OpenAI: arguments=문자열
                 }
                 wire.put("tool_calls", tcs);
+            } else {
+                // assistant 직답·user·system·tool: content 필수 → null이면 빈 문자열로 안전화
+                wire.put("content", m.content() != null ? m.content() : "");
             }
             if ("tool".equals(m.role())) {
                 wire.put("tool_call_id", m.toolCallId());
@@ -149,6 +163,13 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
                         tc.path("id").asText(""),
                         fn.path("name").asText(""),
                         fn.path("arguments").asText("{}")));  // 이미 문자열
+            }
+        }
+        // tool_calls 필드가 비고 content에 도구 호출 JSON만 흘린 경우 → 실제 호출로 승격(raw 노출 방지).
+        if (toolCalls.isEmpty() && StringUtils.hasText(content)) {
+            List<ToolCall> recovered = ToolCallEcho.recover(content, objectMapper);
+            if (!recovered.isEmpty()) {
+                return new AgentTurn(name(), "", recovered);
             }
         }
         return new AgentTurn(name(), content, toolCalls);
