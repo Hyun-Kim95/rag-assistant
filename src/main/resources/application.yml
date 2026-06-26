@@ -4,6 +4,9 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:15432/rag_assistant
     username: rag_assistant
+  sql:
+    init:
+      mode: always   # schema.sql 자동 실행(call_sessions/call_turns, IF NOT EXISTS). 기존 테이블은 미포함이라 무영향
   servlet:
     multipart:
       max-file-size: 5MB
@@ -75,6 +78,13 @@ agent:
   read-max-chunks: 6
   read-max-chars: 4000
   summarize-max-chars: 8000
+
+voice:
+  tts:
+    enabled: false                  # 기본 off(브라우저 폴백). 서버 Google TTS 쓰려면 local에서 true + GOOGLE_APPLICATION_CREDENTIALS
+    language-code: ko-KR
+    voice-name: ko-KR-Neural2-A     # Neural2 한국어 음성 (저지연)
+    speaking-rate: 1.0
 
 logging:
   level:

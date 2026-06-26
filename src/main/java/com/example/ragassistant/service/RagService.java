@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -26,7 +27,9 @@ import static com.example.ragassistant.service.PromptBuilder.NO_ANSWER_MESSAGE;
 @Service
 public class RagService {
 
-    /** PromptBuilder [Context]/[Question]/[Answer] 라벨·Context 메타 줄 (답변 끝 잔여물) */
+    /**
+     * PromptBuilder [Context]/[Question]/[Answer] 라벨·Context 메타 줄 (답변 끝 잔여물)
+     */
     private static final Pattern TRAILING_PROMPT_META_LINE = Pattern.compile(
             "(?i)^\\s*(\\[(?:Context|Question|Answer)]"
                     + "|Context에서|Context에|Context만).*$");
@@ -38,7 +41,9 @@ public class RagService {
     private static final Pattern LANGUAGE_FENCE = Pattern.compile(
             "(?is)```\\s*(?:korean|korea|한국어)\\s*\\n(.*?)\\n?```");
 
-    /** 한자(CJK Unified Ideographs) 1자 이상 — 한국어 답에는 등장하지 않아야 한다. */
+    /**
+     * 한자(CJK Unified Ideographs) 1자 이상 — 한국어 답에는 등장하지 않아야 한다.
+     */
     private static final Pattern CJK_CHAR = Pattern.compile("[\\u4E00-\\u9FFF\\u3400-\\u4DBF]");
 
     private final Retriever retriever;
@@ -144,7 +149,9 @@ public class RagService {
         return withoutCjk;
     }
 
-    /** 한자가 섞인 줄(중국어 누출)을 제거한다. 전부 제거되면 과삭제 방지로 원본을 유지한다. */
+    /**
+     * 한자가 섞인 줄(중국어 누출)을 제거한다. 전부 제거되면 과삭제 방지로 원본을 유지한다.
+     */
     private static String stripCjkLines(String answer) {
         String result = answer.lines()
                 .filter(line -> !CJK_CHAR.matcher(line).find())
@@ -153,7 +160,9 @@ public class RagService {
         return result.isEmpty() ? answer : result;
     }
 
-    /** LLM이 붙이는 프롬프트 라벨·Context 메타 요약 등 마지막 줄 제거 */
+    /**
+     * LLM이 붙이는 프롬프트 라벨·Context 메타 요약 등 마지막 줄 제거
+     */
     private static String stripTrailingPromptMetaLines(String answer) {
         String result = answer;
         while (StringUtils.hasText(result)) {
@@ -167,7 +176,9 @@ public class RagService {
         return result;
     }
 
-    /** LLM이 답 앞에 붙이는 [Answer] 라벨 제거 */
+    /**
+     * LLM이 답 앞에 붙이는 [Answer] 라벨 제거
+     */
     private static String stripLeadingAnswerLabel(String answer) {
         return answer.replaceFirst("(?is)^\\s*\\[Answer]\\s*", "").strip();
     }
@@ -192,10 +203,11 @@ public class RagService {
     }
 
     /**
-     * RAG 스트리밍: retrieve(동기) → LLM stream → SSE done.
-     * 호출 스레드에서 blocking — Controller가 별도 스레드에서 실행할 것.
+     * RAG 스트리밍 코어 (전송 비종속): retrieve(동기) → no-answer | LLM stream(onDelta) → ChatResponse.
+     * SSE·WebSocket 등 어떤 전송이든 onDelta 콜백으로 토큰 조각을 받는다.
+     * 호출 스레드에서 blocking — 호출자가 별도 스레드에서 실행할 것.
      */
-    public void chatStream(String question, SseEmitter emitter) {
+    public ChatResponse streamAnswer(String question, Consumer<String> onDelta) {
         if (!StringUtils.hasText(question)) {
             throw new IllegalArgumentException("질문이 비어 있습니다.");
         }
@@ -204,31 +216,39 @@ public class RagService {
             List<SearchHit> hits = retriever.retrieve(question.trim());
             if (hits.isEmpty()) {
                 telemetry.recordResult(0, null, false, NoAnswerReason.EMPTY_HITS);
-                sendDone(emitter, ChatResponse.noAnswer(NO_ANSWER_MESSAGE));
-                emitter.complete();
-                return;
+                return ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
             }
             String prompt = promptBuilder.build(hits, question);
             long tGen = System.nanoTime();
-            String fullAnswer = sanitizeLlmAnswer(ollamaService.streamChat(prompt, piece ->
-                    sendEvent(emitter, "delta", ChatStreamEvent.delta(piece))
-            ));
+            String fullAnswer = sanitizeLlmAnswer(ollamaService.streamChat(prompt, onDelta));
             telemetry.recordGenerationMs(msSince(tGen));
             boolean grounded = isGrounded(fullAnswer);
             telemetry.recordResult(hits.size(), hits.get(0).getScore(), grounded,
                     grounded ? null : NoAnswerReason.LLM_NO_ANSWER);
-            ChatResponse response = grounded
-                    ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true
-                            , telemetry.currentProvider())
+            return grounded
+                    ? new ChatResponse(fullAnswer, hits.stream().map(SourceCitation::from).toList(), true,
+                    telemetry.currentProvider())
                     : ChatResponse.noAnswer(NO_ANSWER_MESSAGE);
-            sendDone(emitter, response);
-            emitter.complete();
-        } catch (Exception ex) {
-            emitter.completeWithError(ex);
         } finally {
             telemetry.endAndLog();
         }
     }
+
+    /**
+     * RAG 스트리밍(SSE): streamAnswer 코어를 SSE 전송으로 감싼다.
+     * 호출 스레드에서 blocking — Controller가 별도 스레드에서 실행할 것.
+     */
+    public void chatStream(String question, SseEmitter emitter) {
+        try {
+            ChatResponse response = streamAnswer(question, piece ->
+                    sendEvent(emitter, "delta", ChatStreamEvent.delta(piece)));
+            sendDone(emitter, response);
+            emitter.complete();
+        } catch (Exception ex) {
+            emitter.completeWithError(ex);
+        }
+    }
+
     private void sendEvent(SseEmitter emitter, String eventName, ChatStreamEvent payload) {
         try {
             emitter.send(SseEmitter.event()
@@ -238,6 +258,7 @@ public class RagService {
             throw new RuntimeException("SSE 전송 실패", ex);
         }
     }
+
     private void sendDone(SseEmitter emitter, ChatResponse response) {
         sendEvent(emitter, "done", ChatStreamEvent.done(response));
     }

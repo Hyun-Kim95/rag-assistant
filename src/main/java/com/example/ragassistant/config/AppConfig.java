@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 @Configuration
 @EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class,
-        RoutingProperties.class, OpenAiCompatProperties.class, AgentProperties.class})
+        RoutingProperties.class, OpenAiCompatProperties.class, AgentProperties.class, VoiceProperties.class})
 public class AppConfig {
 
     @Bean

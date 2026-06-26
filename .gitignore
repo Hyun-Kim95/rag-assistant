@@ -72,3 +72,6 @@ docs/portfolio/
 ### RAG eval ###
 eval/reports/runs/
 eval/reports/_diag_*
+
+gcp-tts-key.json
+*gcp*key*.json

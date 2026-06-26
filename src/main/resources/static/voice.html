@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>음성 RAG 봇 (PoC)</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+        .voice-wrap { max-width: 720px; margin: 0 auto; padding: 24px; }
+        .voice-state { display: inline-block; padding: 4px 12px; border-radius: 999px;
+            background: #e5e7eb; color: #111; font-weight: 600; font-size: 14px; }
+        .voice-state[data-state="LISTENING"] { background: #dcfce7; }
+        .voice-state[data-state="THINKING"]  { background: #fef9c3; }
+        .voice-state[data-state="SPEAKING"]  { background: #dbeafe; }
+        .voice-state[data-state="HANDOFF"]   { background: #fee2e2; }
+        .voice-partial { min-height: 24px; color: #6b7280; font-style: italic; margin: 12px 0; }
+        .voice-thread { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+        .vmsg { padding: 8px 12px; border-radius: 12px; max-width: 80%; white-space: pre-wrap; }
+        .vmsg--user { align-self: flex-end; background: #2563eb; color: #fff; }
+        .vmsg--assistant { align-self: flex-start; background: #f3f4f6; color: #111; }
+        .vmsg--system { align-self: center; background: #fef2f2; color: #b91c1c; font-size: 13px; }
+        .voice-controls { display: flex; gap: 12px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div class="voice-wrap">
+    <h1>음성 RAG 봇 <small>(PoC · 단계 1)</small></h1>
+    <p>상태: <span id="call-state" class="voice-state" data-state="IDLE">IDLE</span></p>
+    <p id="unsupported" hidden style="color:#b91c1c">
+        이 브라우저는 음성 인식(Web Speech API)을 지원하지 않습니다. Chrome 또는 Edge를 사용하세요.
+    </p>
+    <div id="partial" class="voice-partial" aria-live="polite"></div>
+    <div id="voice-thread" class="voice-thread"></div>
+    <div class="voice-controls">
+        <button id="start-btn" class="btn">통화 시작</button>
+        <button id="stop-btn" class="btn btn--ghost" disabled>통화 종료</button>
+    </div>
+</div>
+<script src="/js/voice.js"></script>
+</body>
+</html>

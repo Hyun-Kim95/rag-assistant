@@ -27,6 +27,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
     implementation 'org.apache.pdfbox:pdfbox:3.0.7'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    // Google Cloud TTS (버전은 BOM이 관리 — 최신 BOM은 https://cloud.google.com/java/docs/bom 확인)
+    implementation platform('com.google.cloud:libraries-bom:26.72.0')
+    implementation 'com.google.cloud:google-cloud-texttospeech'
     runtimeOnly 'org.postgresql:postgresql'
     testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

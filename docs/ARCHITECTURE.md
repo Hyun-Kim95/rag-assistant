@@ -335,6 +335,40 @@ HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 
 ### Extension (hybrid, 로컬 수동)
 - `pg_trgm` — `ChunkRepository.searchLexical` (`similarity(content, ?)`)
 
+### call_sessions / call_turns (Voice 통화 로그)
+> 통화 로그만 `src/main/resources/schema.sql`로 앱 시작 시 자동 생성한다(`spring.sql.init.mode=always` + `CREATE TABLE IF NOT EXISTS`). 기존 documents/chunks/embeddings는 수동 DDL 유지.
+
+**call_sessions**
+
+| column | type | note |
+|---|---|---|
+| id | bigserial PK | |
+| started_at / ended_at | timestamp | |
+| final_state | varchar(20) | COMPLETED / HANDOFF / ERROR |
+| handoff_reason | varchar(50) null | no-answer 연속 등 전환 사유 |
+
+**call_turns**
+
+| column | type | note |
+|---|---|---|
+| id | bigserial PK | |
+| session_id | bigint FK → call_sessions **ON DELETE CASCADE** | `idx_call_turns_session` |
+| turn_index | int | 턴 순번 |
+| user_text_masked | text | **PII 마스킹 후** 저장 (`PiiMasker`) |
+| answer_text | text | |
+| grounded | boolean | |
+| stt_ms / llm_ms / tts_ms / ttfb_ms | int | 구간별 지연 |
+| created_at | timestamp | |
+
+**PII 마스킹 (`PiiMasker`)**
+- 대상: 이메일·주민등록번호·카드번호·휴대전화·긴 숫자열(계좌 등).
+- 순서: 구체 패턴(이메일→주민→카드→전화)을 먼저 치환해 의미 토큰(`[전화번호]` 등)을 확정한 뒤, 남은 `\d{7,}`를 `[번호]`로 일반화한다. 일반화를 먼저 하면 구체 토큰을 잃기 때문.
+
+**구간 지연 (`call_turns`)**
+- `llm_ms`(RAG+LLM 스트림), `tts_ms`(TTS 합성), `ttfb_ms`(발화 처리~첫 `answer.delta`)는 서버 측정.
+- `stt_ms`는 브라우저 STT가 측정해 `user_utterance`로 전달한다.
+- 로그 저장 실패는 통화를 막지 않는다(세션 생성/턴 저장/종료 기록 모두 예외 흡수).
+
 ## 7. 설정값
 
 `application.yml`
