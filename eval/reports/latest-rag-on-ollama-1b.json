@@ -1,0 +1,530 @@
+{
+  "version" : "v2",
+  "mode" : "RAG_ON",
+  "ranAt" : "2026-06-27T07:45:42.671445400Z",
+  "totalScore" : 11,
+  "maxTotalScore" : 20,
+  "results" : [ {
+    "id" : 1,
+    "category" : "A_FACT",
+    "question" : "이 프로젝트의 기술 스택은?",
+    "mode" : "RAG_ON",
+    "answer" : "이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**: Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**: Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**: RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**: WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**: DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n\t* Chat UI는 단순 챗 UI가 아니라 검색 + 생성 + 출처 인용 파이프라인이 핵심입니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n\t* embedding model은 Windows 로컬 개발에 적합하고 OpenAI-compatible API로 Spring에서 연동이 가능합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**:\n\t* DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**:\n\t* DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**:\n\t* DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**:\n\t* DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를 사용하여 스트리밍을 구현합니다.\n5. **DB**:\n\t* DocumentDB 또는 PostgreSQL을 사용하여 문서의 정보를 저장합니다.\n\n이 프로젝트의 기술 스택은 다음과 같습니다.\n\n1. **Chat UI**:\n\t* Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현합니다.\n2. **LLM/Embedding**:\n\t* Ollama에서 사용하는 LLM API와 embedding model을 사용하여 문서 기반 Q&A를 구현합니다.\n3. **API**:\n\t* RAG API를 구현하여 문서 기반 Q&A를 제공합니다.\n4. **WebSockets**:\n\t* WebSocket 이벤트를",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1184,
+      "snippet" : "<!-- 데모 코퍼스용: DECISIONS.md의 핵심 아키텍처 결정(1~12장)만 포함. 시스템 자기서술(평가/프롬프트/라우팅/agent 13~18장)은 자가오염 방지를 위해 제외함. -->\n# 기술 선택 기록 (DECISIONS)\n\n이 문서는 `rag-assistant` 프로젝트에서 내린 주요 설계·기술 선택과 그 이유를 정리합니다.\n\n## 1. 프로젝...",
+      "score" : 0.011201214
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1185,
+      "snippet" : "llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.**\n\n- 단순 챗 UI가 아니라 **검색 + 생성 + 출처 인용** 파이프라인이 핵심\n- 외부 LLM API 없이 로컬 환경에서 동작\n\n## 2. LLM / Embedding: Ollama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base UR...",
+      "score" : 0.0010817152
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1204,
+      "snippet" : "리·문서 정책 (2026-06)\n\n### Ollama 오류\n- `OllamaService.postForMap()`: chat/embed 공통 HTTP 호출\n- 연결 실패 (`ResourceAccessException`) → 503 `OLLAMA_UNAVAILABLE`\n- HTTP 4xx/5xx·응답 body/형식 오류 → 502 `OLLAMA_RESPONS...",
+      "score" : 7.350449E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 6.337125E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1191,
+      "snippet" : "·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시 새 구현체(예: `RoutingChatModelClient`)를 `@Primary`로 추가하고 빈 와이어링만 바꾼다 → 소비자 코드 불변.\n- **분리 단위:** chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터...",
+      "score" : 3.0061635E-4
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1251,
+      "snippet" : "ents\",\"arguments\":{...}}` | 도구 호출 시작 |\n| `step` | `{\"index\":1,\"phase\":\"tool_result\",\"tool\":\"search_documents\",\"resultSummary\":\"8 sources\"}` | 도구 결과 |\n| `delta` | `{\"text\":\"...\"}` | 최종 답 토큰(청크) |\n| `do...",
+      "score" : 2.3782204E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 997,
+      "snippet" : "니다(`IF NOT EXISTS`).\n\nWebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)\n\n## RAG 평가\n\n고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자...",
+      "score" : 2.2516825E-4
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1250,
+      "snippet" : "odelClient`와 분리된 `AgentChatClient`로 회귀 0.\n\n#### 스트리밍 (`POST /api/agent/stream`, SSE)\n\n요청 body는 `/api/agent`와 동일. 빈 `message`는 스트림 열기 전 **400 JSON**.\n\n| SSE event | data (JSON) | 설명 |\n|---|---|---|\n| `...",
+      "score" : 1.634647E-4
+    } ],
+    "noAnswer" : false,
+    "score" : 2,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 2,
+    "category" : "A_FACT",
+    "question" : "Ollama base-url은?",
+    "mode" : "RAG_ON",
+    "answer" : "`http://localhost:11434`\n\n```json\n{\n  \"status\": \"UP\",\n  \"service\": \"ollama\",\n  \"dependencies\": {\n    \"ollama\": \"UP\",\n    \"database\": \"UP\",\n    \"reranker\": \"UP\"\n  }\n}\n```\n\n`ollama`의 base-url은 `http://localhost:11434`입니다.",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1267,
+      "snippet" : "r.delta`)는 서버 측정.\n- `stt_ms`는 브라우저 STT가 측정해 `user_utterance`로 전달한다.\n- 로그 저장 실패는 통화를 막지 않는다(세션 생성/턴 저장/종료 기록 모두 예외 흡수).\n\n## 7. 설정값\n\n`application.yml`\n\n```yaml\nollama:\n  base-url: http://localhost:11434...",
+      "score" : 0.9907678
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1185,
+      "snippet" : "llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.**\n\n- 단순 챗 UI가 아니라 **검색 + 생성 + 출처 인용** 파이프라인이 핵심\n- 외부 LLM API 없이 로컬 환경에서 동작\n\n## 2. LLM / Embedding: Ollama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base UR...",
+      "score" : 0.98942953
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1212,
+      "snippet" : "ine 우선 표시\n\n### 로컬 DDL (repo migration 미포함)\n```sql\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\nCREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm\n    ON document_chunks USING gin (content gin_trgm...",
+      "score" : 0.71353143
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 976,
+      "snippet" : "r 동작 (~45초 분량).\n\n<img width=\"1216\" height=\"742\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/1e1830a6-3e13-4a6d-b255-7d9659e46fc5\" />\n\n## 실행\n\n**필요:** JDK 17, Ollama (`http://localhost:1...",
+      "score" : 0.2859698
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1292,
+      "snippet" : "ection.isValid(2)` | core |\n| `ollama` | `GET {base}/api/tags` 2xx | core |\n| `reranker` | `GET {base}/health` 2xx | rerank off면 `DISABLED`(상태 무관) |\n\n```json\n{ \"status\": \"DEGRADED\", \"service\": \"rag-as...",
+      "score" : 0.23704566
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1291,
+      "snippet" : "e`는 TEI 다운 시 degraded 동작을 그대로 드러낸다(§14 DECISIONS의 fallback과 정합).\n\n### Health 심화 (`GET /api/health`)\n\n`HealthService`가 의존성 readiness를 짧은 타임아웃으로 점검한다.\n\n| 의존성 | 점검 | 비고 |\n|---|---|---|\n| `database` | `Co...",
+      "score" : 0.11656274
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1283,
+      "snippet" : "→ LLM) | 프로덕션 경로 |\n| `RAG_OFF` | `OllamaService.chat` (검색·Context 없음) | v2 대조군(ablation), `grounded=false`·`sources=[]` 고정 |\n\n### 채점 (`EvalScorer`)\n\nLLM-as-judge 없이 **결정적 룰**로 0/1/2점. 문항 정의(`eval/ques...",
+      "score" : 0.0145595195
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1274,
+      "snippet" : "으면 LLM을 호출하지 않고 바로 no-answer를 반환한다(§9).\n\n## 9. 예외 / 상태 처리\n\n| 상황 | HTTP | error / 동작 |\n|---|---|---|\n| Ollama 미실행·연결 실패 | 503 | `OLLAMA_UNAVAILABLE` |\n| Ollama HTTP 4xx/5xx·응답 형식 오류 | 502 | `OLLAMA_RES...",
+      "score" : 0.009633653
+    } ],
+    "noAnswer" : false,
+    "score" : 2,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 3,
+    "category" : "A_FACT",
+    "question" : "chat / embedding model 이름은?",
+    "mode" : "RAG_ON",
+    "answer" : "1. **chat** / **embedding model** 이름은? \n   - `qwen2.5:7b` \n\n2. **chat** / **embedding model** 이름은? \n   - `nomic-embed-text`\n\n3. **chat** / **embedding model** 이름은? \n   - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n4. **chat** / **embedding model** 이름은? \n   - `qwen2.5:7b` \n\n5. **chat** / **embedding model** 이름은? \n   - `nomic-embed-text`\n\n6. **chat** / **embedding model** 이름은? \n   - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n7. **chat** / **embedding model** 이름은? \n   - `qwen2.5:7b` \n\n8. **chat** / **embedding model** 이름은? \n   - `nomic-embed-text`\n\n9. **chat** / **embedding model** 이름은? \n   - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n10. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n11. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n12. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n13. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n14. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n15. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n16. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n17. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n18. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n19. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n20. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n21. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n22. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n23. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n24. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n25. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n26. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n27. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n28. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n29. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n30. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n31. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n32. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n33. **chat** / **embedding model** 이름은? \n    - `llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.`\n\n34. **chat** / **embedding model** 이름은? \n    - `qwen2.5:7b` \n\n35. **chat** / **embedding model** 이름은? \n    - `nomic-embed-text`\n\n36. **chat** / **embedding model** 이름은? \n    - `",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1185,
+      "snippet" : "llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.**\n\n- 단순 챗 UI가 아니라 **검색 + 생성 + 출처 인용** 파이프라인이 핵심\n- 외부 LLM API 없이 로컬 환경에서 동작\n\n## 2. LLM / Embedding: Ollama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base UR...",
+      "score" : 0.93439513
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1186,
+      "snippet" : "l: `nomic-embed-text`\n\n### 이유\n- Windows 로컬 개발에 적합\n- OpenAI-compatible API로 Spring에서 연동이 단순\n- 기존 다른 프로젝트와 같은 Ollama 인스턴스를 재사용 가능\n- API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- c...",
+      "score" : 0.79692537
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1230,
+      "snippet" : "ngRepository\n├── llm\n│   ├── ChatModelClient        (chat·streamChat 경계, 구현 비의존)\n│   ├── EmbeddingModelClient   (embed 경계 — RAG 정책 미포함)\n│   └── agent\n│       ├── AgentChatClient            (tool calli...",
+      "score" : 0.60223705
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1187,
+      "snippet" : "쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector** 사용\n\n### 이유\n- 별도 벡터 DB를 추가하지 않아도 됨\n- Spring Boot + JDBC...",
+      "score" : 0.5943158
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1190,
+      "snippet" : "at·streamChat)·`llm.EmbeddingModelClient`(embed) **인터페이스 뒤로 분리**. 소비자(`RagService`·`EmbeddingService`·`RagEvalRunner`·`DebugController`)는 인터페이스에만 의존.\n- 구현체는 **Ollama 단일**(`OllamaService implements Cha...",
+      "score" : 0.5904841
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1267,
+      "snippet" : "r.delta`)는 서버 측정.\n- `stt_ms`는 브라우저 STT가 측정해 `user_utterance`로 전달한다.\n- 로그 저장 실패는 통화를 막지 않는다(세션 생성/턴 저장/종료 기록 모두 예외 흡수).\n\n## 7. 설정값\n\n`application.yml`\n\n```yaml\nollama:\n  base-url: http://localhost:11434...",
+      "score" : 0.5666781
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1189,
+      "snippet" : "연동\n- **Spring AI 미사용**\n\n### 이유\n- chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어\n- Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확함\n\n### LLM 호출 경계 (2026-06)\n- Ollama 호출을 `llm.ChatMode...",
+      "score" : 0.5603128
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1229,
+      "snippet" : "ionTurn       (멀티턴 1턴: role·content)\n│   └── ErrorResponse\n├── domain\n│   ├── Document\n│   ├── Chunk\n│   ├── StoredChunk\n│   └── SearchHit\n├── parser\n│   └── DocumentParser\n├── repository\n│   ├── Docu...",
+      "score" : 0.2844766
+    } ],
+    "noAnswer" : false,
+    "score" : 2,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 4,
+    "category" : "A_FACT",
+    "question" : "pgvector 대신 Chroma를 쓰지 않은 이유?",
+    "mode" : "RAG_ON",
+    "answer" : "Chroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할 수 있습니다. pgvector는 이러한 특성을 가지고 있기 때문에 RAG 프로젝트에서 사용하는 경우에 유용합니다.\n\nChroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할 수 있습니다. pgvector는 이러한 특성을 가지고 있기 때문에 RAG 프로젝트에서 사용하는 경우에 유용합니다.\n\nChroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할 수 있습니다. pgvector는 이러한 특성을 가지고 있기 때문에 RAG 프로젝트에서 사용하는 경우에 유용합니다.\n\nChroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할 수 있습니다. pgvector는 이러한 특성을 가지고 있기 때문에 RAG 프로젝트에서 사용하는 경우에 유용합니다.\n\nChroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할 수 있습니다. pgvector는 이러한 특성을 가지고 있기 때문에 RAG 프로젝트에서 사용하는 경우에 유용합니다.\n\nChroma 대신 pgvector를 사용한 이유는 다음과 같습니다.\n\n1.  **대형 모델** : pgvector는 대형 모델을 쉽게 관리할 수 있는 벡터 DB로, RAG (Rapid Application Development) 프로젝트에서 사용하는 경우에 유용합니다.\n2.  **기존의 테이블** : pgvector는 existing tables를 쉽게 관리할 수 있습니다. 예를 들어, `documents` 테이블은 `document_embeddings` 테이블과 연관된 테이블입니다.\n3.  **RAG의 특성** : RAG 프로젝트에서 사용하는 경우에, 테이블을 쉽게 modify하고, query를 쉽게 작성할",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1187,
+      "snippet" : "쓰면 느려질 수 있음\n- chat / embedding 모델명은 실제 pull한 이름과 일치해야 함\n\n## 3. 벡터 저장소: PostgreSQL + pgvector\n\n### 선택\n- Chroma 대신 **이미 설치된 PostgreSQL + pgvector** 사용\n\n### 이유\n- 별도 벡터 DB를 추가하지 않아도 됨\n- Spring Boot + JDBC...",
+      "score" : 0.9737945
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1188,
+      "snippet" : "으로 다루기 쉬움\n\n### Chroma를 쓰지 않은 이유\n- RAG 입문에는 Chroma가 더 빠를 수 있음\n- **이미 PostgreSQL이 있고**, Spring Boot + JDBC와 맞추려면 pgvector가 더 적합\n\n## 4. Spring AI 사용 여부\n\n### 선택\n- RAG 파이프라인(chunking · retrieval · prompt ·...",
+      "score" : 0.9727791
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1186,
+      "snippet" : "l: `nomic-embed-text`\n\n### 이유\n- Windows 로컬 개발에 적합\n- OpenAI-compatible API로 Spring에서 연동이 단순\n- 기존 다른 프로젝트와 같은 Ollama 인스턴스를 재사용 가능\n- API 비용 없이 반복 실험 가능\n\n### 주의\n- 여러 프로젝트가 서로 다른 대형 모델을 동시에 쓰면 느려질 수 있음\n- c...",
+      "score" : 0.5483107
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1209,
+      "snippet" : "pgvector cosine top-k (`EmbeddingRepository.searchSimilar`)\n- **lexical leg:** PostgreSQL `pg_trgm` `similarity()` (`ChunkRepository.searchLexical`)\n- **병합:** RRF(Reciprocal Rank Fusion), `k=60` (`Rrf...",
+      "score" : 0.0063143647
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 976,
+      "snippet" : "r 동작 (~45초 분량).\n\n<img width=\"1216\" height=\"742\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/1e1830a6-3e13-4a6d-b255-7d9659e46fc5\" />\n\n## 실행\n\n**필요:** JDK 17, Ollama (`http://localhost:1...",
+      "score" : 0.0021997981
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1260,
+      "snippet" : "-|---|\n| id | bigserial PK | |\n| document_id | bigint FK → documents **ON DELETE CASCADE** | |\n| chunk_index | int | |\n| content | text | chunk 본문 |\n\n### document_embeddings (수동 SQL)\n| column | type |...",
+      "score" : 0.0016743992
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1258,
+      "snippet" : "통화 종료 시 소멸)하며, agent가 `agent.max-history-turns`로 최근 N턴만 사용한다.\n- 턴 종료 시 `call_turns`에 마스킹된 사용자 텍스트·답변·구간 지연을 저장한다(§6).\n- 로그 저장 실패는 통화를 막지 않는다(예외 흡수).\n\n## 6. DB 설계 (pgvector)\n\n### documents (migration S...",
+      "score" : 0.0015188508
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 979,
+      "snippet" : "eval.providers=ollama-7b,groq` (아래 RAG 평가).\n\n```bash\nollama pull qwen2.5:7b\nollama pull nomic-embed-text\n# reranker 모델 (HF TEI 컨테이너가 최초 기동 시 자동 다운로드)\ndocker compose up -d tei-reranker   # BAAI/bge-rer...",
+      "score" : 0.0013458604
+    } ],
+    "noAnswer" : false,
+    "score" : 0,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 5,
+    "category" : "B_POLICY",
+    "question" : "Spring AI를 전면 도입하지 않은 이유?",
+    "mode" : "RAG_ON",
+    "answer" : "Spring AI를 전면 도입하지 않은 이유는 다음과 같습니다.\n\n1.  **Lack of technical expertise**: Spring AI는 전문적인 기술자에게만 개발이 가능합니다. 따라서, Spring AI를 전면 도입하기 위해 전문적인 기술자에게 도움을 필요하거나, 기술 자격이 부족한 사람에게 도움이 필요할 수 있습니다.\n2.  **Lack of experience with LLM**: Spring AI는 LLM (Language Model)와 관련된 기술에 대한 경험은 부족합니다. 따라서, Spring AI를 전면 도입하기 위해 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI는 데이터 preprocessing에 대한 전문적인 기술을 필요로 합니다. 따라서, Spring AI를 전면 도입하기 위해 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI를 개발하고 유지하는 데 필요한 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI를 개발하고 유지하는 데 필요한 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI를 개발하고 유지하는 데 필요한 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI를 개발하고 유지하는 데 필요한 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**: Spring AI를 개발하고 유지하는 데 필요한 데이터 preprocessing에 대한 전문적인 기술을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n\nSpring AI를 전면 도입하기 위해서는 다음과 같은 단계가 필요합니다.\n\n1.  **Lack of technical expertise**: Spring AI를 개발하고 유지하는 데 필요한 기술을 배울 수 있는 교육 및 훈련을 제공해야 합니다.\n2.  **Lack of experience with LLM**: Spring AI를 개발하고 유지하는 데 필요한 LLM와 관련된 기술에 대한 경험을 얻기 위해 많은 시간과 노력이 필요할 수 있습니다.\n3.  **Lack of expertise in data preprocessing**:",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1188,
+      "snippet" : "으로 다루기 쉬움\n\n### Chroma를 쓰지 않은 이유\n- RAG 입문에는 Chroma가 더 빠를 수 있음\n- **이미 PostgreSQL이 있고**, Spring Boot + JDBC와 맞추려면 pgvector가 더 적합\n\n## 4. Spring AI 사용 여부\n\n### 선택\n- RAG 파이프라인(chunking · retrieval · prompt ·...",
+      "score" : 0.11716747
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1185,
+      "snippet" : "llama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현한다.**\n\n- 단순 챗 UI가 아니라 **검색 + 생성 + 출처 인용** 파이프라인이 핵심\n- 외부 LLM API 없이 로컬 환경에서 동작\n\n## 2. LLM / Embedding: Ollama\n\n### 선택\n- Docker로 이미 실행 중인 Ollama 인스턴스 공유\n- Base UR...",
+      "score" : 5.8383244E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1191,
+      "snippet" : "·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시 새 구현체(예: `RoutingChatModelClient`)를 `@Primary`로 추가하고 빈 와이어링만 바꾼다 → 소비자 코드 불변.\n- **분리 단위:** chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터...",
+      "score" : 2.216781E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 7.602479E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1184,
+      "snippet" : "<!-- 데모 코퍼스용: DECISIONS.md의 핵심 아키텍처 결정(1~12장)만 포함. 시스템 자기서술(평가/프롬프트/라우팅/agent 13~18장)은 자가오염 방지를 위해 제외함. -->\n# 기술 선택 기록 (DECISIONS)\n\n이 문서는 `rag-assistant` 프로젝트에서 내린 주요 설계·기술 선택과 그 이유를 정리합니다.\n\n## 1. 프로젝...",
+      "score" : 6.922184E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1190,
+      "snippet" : "at·streamChat)·`llm.EmbeddingModelClient`(embed) **인터페이스 뒤로 분리**. 소비자(`RagService`·`EmbeddingService`·`RagEvalRunner`·`DebugController`)는 인터페이스에만 의존.\n- 구현체는 **Ollama 단일**(`OllamaService implements Cha...",
+      "score" : 4.870464E-5
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1265,
+      "snippet" : "CADE** | `idx_call_turns_session` |\n| turn_index | int | 턴 순번 |\n| user_text_masked | text | **PII 마스킹 후** 저장 (`PiiMasker`) |\n| answer_text | text | |\n| grounded | boolean | |\n| stt_ms / llm_ms / tts_m...",
+      "score" : 4.7576454E-5
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 1005,
+      "snippet" : "` — 모드별 최신 결과\n- `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)\n- `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)\n\n수동 측정 기록 (자동화 이전):\n\n- [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — b...",
+      "score" : 4.720623E-5
+    } ],
+    "noAnswer" : false,
+    "score" : 1,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 6,
+    "category" : "B_POLICY",
+    "question" : "검색 hit가 없을 때 앱은 어떻게 동작하나?",
+    "mode" : "RAG_ON",
+    "answer" : "`문서에서 확인할 수 없는 질문입니다.`는 `Context`에 있는 정보가 없을 때만 단독 출력합니다. \n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n이 예외를 통해, `noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`no-answer` 패턴이면 `grounded=false`, `sources[]`로 정렬합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`no-answer` 패턴이면 `LLM_NO_ANSWER`로 정렬됩니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`no-answer` 패턴이면 `grounded=false`, `sources[]`로 정렬합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`no-answer` 패턴이면 `LLM_NO_ANSWER`로 정렬됩니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`no-answer` 패턴이면 `grounded=false`, `sources[]`로 정렬합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`no-answer` 패턴이면 `LLM_NO_ANSWER`로 정렬됩니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`no-answer` 패턴이면 `grounded=false`, `sources[]`로 정렬합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`no-answer` 패턴이면 `LLM_NO_ANSWER`로 정렬됩니다. \n\n```python\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=false\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER`로 정렬되는 질문을 제거합니다.\n\n```python\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n```\n\n`noAnswerReason` 필터가 사용되어 `LLM_NO_ANSWER",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1273,
+      "snippet" : ")\n\n프롬프트는 system·user 두 레이어로 구성된다(`OllamaService`·`PromptBuilder`). 핵심 원칙은 검색으로 찾은 근거(Context)만 사용해 한국어로 답하고, 근거가 없으면 \"문서에서 확인할 수 없는 질문입니다\"로 응답하는 것이다. LLM 응답은 후처리(`RagService.sanitizeLlmAnswer`)로 메타 잔여...",
+      "score" : 0.55290186
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1234,
+      "snippet" : "etry          (요청 1건 지표 POJO)\n│   ├── QueryTelemetryContext   (ThreadLocal 수집기 + 구조적 로그)\n│   ├── NoAnswerReason          (EMPTY_HITS | LLM_NO_ANSWER)\n│   └── RequestIdFilter         (MDC requestId + X...",
+      "score" : 0.0074030147
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1233,
+      "snippet" : "├── ReadDocumentTool      (ChunkService 본문 청크 범위)\n│       └── SummarizeDocumentTool (DocumentService 본문 + LLM 요약)\n├── search\n│   ├── RrfFusion\n│   └── Reranker            (TEI cross-encoder /rerank, 2...",
+      "score" : 0.005598249
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1200,
+      "snippet" : "→ min-score 필터\n- `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = \"문서에서 확인할 수 없는 질문입니다.\"; Context는 `[출처: 문서명]`만 LLM에 전달\n- `OllamaService`: `contentPrompt`(system) — 한국어·`...",
+      "score" : 0.0039148238
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1287,
+      "snippet" : "이언트가 보낸 `X-Request-Id`가 있으면 재사용, 없으면 생성(8자).\n- 스트리밍은 `ChatController`가 별도 스레드에서 처리하므로 `requestId`를 그 스레드 MDC로 전파한다.\n\n### 구조적 요청 로그 (`rag.telemetry`)\n\n`QueryTelemetryContext`(ThreadLocal)가 RAG 요청 1건의 지...",
+      "score" : 0.001648483
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1228,
+      "snippet" : "├── dto\n│   ├── DocumentResponse\n│   ├── DocumentListResponse\n│   ├── ChunkResponse\n│   ├── ChatRequest\n│   ├── ChatResponse\n│   ├── ChatStreamEvent\n│   ├── SourceCitation\n│   ├── AgentRequest        ...",
+      "score" : 0.001032231
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 8.1355654E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 997,
+      "snippet" : "니다(`IF NOT EXISTS`).\n\nWebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)\n\n## RAG 평가\n\n고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자...",
+      "score" : 5.953407E-4
+    } ],
+    "noAnswer" : false,
+    "score" : 2,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 7,
+    "category" : "B_POLICY",
+    "question" : "chunk-size와 chunk-overlap은?",
+    "mode" : "RAG_ON",
+    "answer" : "chunk-size는 450, chunk-overlap는 150입니다.",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1193,
+      "snippet" : "snippet** 포함\n- API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일\n\n### 초기 UI\n- 먼저 API 완성\n- 이후 간단한 업로드 + 채팅 UI 추가\n\n## 6. Chunking 정책 (2026-06)\n\n### 선택\n- 초기: `chunk-size: 700`, `chunk-overlap: 100...",
+      "score" : 0.9811669
+    }, {
+      "documentName" : "__SYSTEM_FAQ.md",
+      "chunkId" : 497,
+      "snippet" : "[설정] RAG chunk 및 retrieval 파라미터\nchunk-size: 450, chunk-overlap: 150, top-k: 10, min-score: 0.2.\nembedding dimension: 768. 설정 파일: application.yml의 rag 섹션.",
+      "score" : 0.98076576
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1267,
+      "snippet" : "r.delta`)는 서버 측정.\n- `stt_ms`는 브라우저 STT가 측정해 `user_utterance`로 전달한다.\n- 로그 저장 실패는 통화를 막지 않는다(세션 생성/턴 저장/종료 기록 모두 예외 흡수).\n\n## 7. 설정값\n\n`application.yml`\n\n```yaml\nollama:\n  base-url: http://localhost:11434...",
+      "score" : 0.81286734
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1194,
+      "snippet" : "형·긴 위키에서 retrieval recall 개선 시도\n- 텍스트 정규화: `\\r\\n` → `\\n` 후 고정 길이 분할, overlap으로 문맥 단절 완화\n- chunk metadata: `documentId`, `documentName`, `chunkIndex`\n\n### 구현\n- `Chunker` → `VectorStoreService` 업로드 시 DB...",
+      "score" : 0.111627996
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1198,
+      "snippet" : "xDocument` (동일 `@Transactional`)\n\n### 테이블\n- `document_chunks`: chunk 원문\n- `document_embeddings`: chunk 1:1 vector + `document_name` (출처 denormalize)\n\n### 인덱스·FK (로컬 DDL, repo migration 미포함)\n- HNSW (`d...",
+      "score" : 0.0051196762
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1213,
+      "snippet" : "url은?」— DECISIONS 1순위, `grounded: true` |\n| hybrid on 회귀 | 동일 질문 — 순위·답변 동일 (vector가 이미 충분) |\n| no-answer 회귀 | 「2025년 매출」— no-answer, `sources: []` |\n| lexical-stress | `nomic-embed-text` — vector 1위 ...",
+      "score" : 0.0023504829
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1208,
+      "snippet" : "PDFBox 3.x: `Loader.loadPDF` → 페이지별 `PDFTextStripper`\n- `setSortByPosition(true)` — 다단/표 읽기 순서 1차 개선\n- 페이지 구분자 `--- Page N ---` — chunk·출처 snippet 힌트\n- 텍스트 0자(스캔 PDF) → `DocumentParseException`, OCR *...",
+      "score" : 0.0016040893
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1261,
+      "snippet" : "nt FK → document_chunks **ON DELETE CASCADE** | |\n| embedding | vector(768) | pgvector, `nomic-embed-text` |\n| document_name | varchar | 검색 결과 표시용 |\n\n### 인덱스\n- `document_embeddings.embedding` → HNSW (...",
+      "score" : 0.0011695103
+    } ],
+    "noAnswer" : false,
+    "score" : 2,
+    "maxScore" : 2,
+    "failReasons" : [ ]
+  }, {
+    "id" : 8,
+    "category" : "C_NO_ANSWER",
+    "question" : "이 프로젝트의 2025년 매출은?",
+    "mode" : "RAG_ON",
+    "answer" : "이 프로젝트의 목표는 Ollama와 pgvector로 업로드 문서 기반 Q&A(RAG)를 구현하는 것입니다. \n\n### Ollama\n\n- Ollama는 LLM (Language Model)입니다.\n- Ollama는 chat UI를 제공합니다.\n- Ollama는 search + generate + source 인용 파이프라인을 사용합니다.\n\n### RAG\n\nRAG은 문서 기반 Q&A 시스템입니다.\n- RAG는 documents와 chunks의 relationship을 사용합니다.\n- RAG는 search, generate, and source 인용을 사용합니다.\n\n### LLM / Embedding\n\nOllama는 embeddings을 사용하여 documents를 embed합니다. \n\n### API / UX\n\nAPI는 Ollama와 pgvector로 구현됩니다.\n- API는 search, generate, and source 인용을 제공합니다.\n- API는 chat UI를 제공합니다.\n\n### RAG 질의응답\n\nRAG의 질의 응답은 다음과 같습니다.\n\n*   `Retriever`: 질문 embed → EmbeddingRepository.searchSimilar (cosine, top-k) → min-score 필터\n*   `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = \"문서에서 확인할 수 없는 질문입니다.\"; Context는 `[출처: 문서명]`만 LLM에 전달\n\n### RAG 질의응답 (2026-06)\n\nRAG의 질의 응답은 다음과 같습니다.\n\n*   선택\n    *   `Retriever`: 질문 embed → EmbeddingRepository.searchSimilar (cosine, top-k) → min-score 필터\n    *   `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = \"문서에서 확인할 수 없는 질문입니다.\"; Context는 `[출처: 문서명]`만 LLM에 전달\n*   RAG 질의응답 (2026-06)\n    *   선택\n        *   `Retriever`: 질문 embed → EmbeddingRepository.searchSimilar (cosine, top-k) → min-score 필터\n        *   `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = \"문서에서 확인할 수 없는 질문입니다.\"; Context는 `[출처: 문서명]`만 LLM에 전달",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1284,
+      "snippet" : "s=[]`·no-answer 문구여야 만점 |\n| `mustGrounded` / `minSourceCount` | 사실·정책 문항의 grounded·출처 하한 |\n| `mustContainAll` / `mustContainAny` | 기대 키워드 (전부 / 일부) |\n| `mustNotContain` | 금지·환각 키워드 (위반 시 0점, `failReas...",
+      "score" : 3.077431E-4
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1251,
+      "snippet" : "ents\",\"arguments\":{...}}` | 도구 호출 시작 |\n| `step` | `{\"index\":1,\"phase\":\"tool_result\",\"tool\":\"search_documents\",\"resultSummary\":\"8 sources\"}` | 도구 결과 |\n| `delta` | `{\"text\":\"...\"}` | 최종 답 토큰(청크) |\n| `do...",
+      "score" : 1.7674513E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1203,
+      "snippet" : "chunk·top-k로 정책 질문(6·7번) 안정화 ([`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md))\n- min-score는 Java filter (SQL WHERE 미적용), 후보 단계에만 적용 (rerank score엔 미적용 — §14)\n- RAG on/off 10문항 비교 완료 ([`RAG_EVAL_v2.md`](RAG_EVA...",
+      "score" : 1.535624E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1184,
+      "snippet" : "<!-- 데모 코퍼스용: DECISIONS.md의 핵심 아키텍처 결정(1~12장)만 포함. 시스템 자기서술(평가/프롬프트/라우팅/agent 13~18장)은 자가오염 방지를 위해 제외함. -->\n# 기술 선택 기록 (DECISIONS)\n\n이 문서는 `rag-assistant` 프로젝트에서 내린 주요 설계·기술 선택과 그 이유를 정리합니다.\n\n## 1. 프로젝...",
+      "score" : 1.2632043E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 1005,
+      "snippet" : "` — 모드별 최신 결과\n- `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)\n- `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)\n\n수동 측정 기록 (자동화 이전):\n\n- [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — b...",
+      "score" : 1.2053649E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 997,
+      "snippet" : "니다(`IF NOT EXISTS`).\n\nWebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)\n\n## RAG 평가\n\n고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자...",
+      "score" : 1.0804956E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 8.349628E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1199,
+      "snippet" : ")\n- HNSW (`document_embeddings.embedding`, `vector_cosine_ops`)\n- FK `ON DELETE CASCADE` (documents → chunks → embeddings)\n\n## 8. RAG 질의응답 (2026-06)\n\n### 선택\n- `Retriever`: 질문 embed → `EmbeddingReposit...",
+      "score" : 7.031184E-5
+    } ],
+    "noAnswer" : false,
+    "score" : 0,
+    "maxScore" : 2,
+    "failReasons" : [ "expectNoAnswer but grounded=true", "expectNoAnswer but sources not empty", "expectNoAnswer but answer is not no-answer phrase", "sources above maxSourceCount" ]
+  }, {
+    "id" : 9,
+    "category" : "C_NO_ANSWER",
+    "question" : "Kubernetes로 배포했나?",
+    "mode" : "RAG_ON",
+    "answer" : "RAG (Q&A RAG Assistant) 프로젝트는 Ollama와 pgvector로 업로드 문서 기반 Q&A를 구현하는 것을 목표로 한다. \n\n### 1. 프로젝트 목표\n\n*   Ollama와 pgvector로 업로드 문서 기반 Q&A를 구현한다.\n*   단순 챗 UI가 아니라 검색 + 생성 + 출처 인용 파이프라인이 핵심\n*   외부 LLM API 없이 로컬 환경에서 동작\n\n### 2. LLM / Embedding: Ollama\n\n[출처: ARCHITECTURE.md]\nents\",\"arguments\":{...}}` | 도구 호출 시작 |\n| `step` | `{\"index\":1,\"phase\":\"tool_result\",\"tool\":\"search_documents\",\"resultSummary\":\"8 sources\"}` | 도구 결과\n| `delta` | `{\"text\":\"...\"}` | 최종답 토큰(청크) | \n\n### 3. API / UX 정책\n\n*   검색된 context만 근거로 답변\n*   context가 없거나 score가 낮으면 **no-answer**\n*   가능하면 **출처 문서명 / snippet** 포함\n*   API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일\n\n### 4. Chunking 정책 (2026-06)\n\n*   RAG 입문에는 Chroma가 더 빠를 수 있음\n*   **이미 PostgreSQL이 있고**, Spring Boot + JDBC와 맞추려면 pgvector가 더 적합\n\n### 5. Spring AI 사용 여부\n\n*   RAG 파이프라인(chunking · retrieval · prompt · no-answer) **직접 구현**\n*   Ollama 호출: `RestClient`로 HTTP 연동\n*   **Spring AI 미사용**\n\n### 6. Chunking 정책 (2026-06)\n\n*   chunking / retrieval / prompt / no-answer를 프레임워크 추상화 없이 코드에서 직접 제어\n*   Ollama 연동·검색 파라미터·no-answer 정책 변경 시 수정 지점이 명확함\n\n### 7. API / UX 정책\n\n*   검색된 context만 근거로 답변\n*   context가 없거나 score가 낮으면 **no-answer**\n*   가능하면 **출처 문서명 / snippet** 포함\n*   API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "README.md",
+      "chunkId" : 997,
+      "snippet" : "니다(`IF NOT EXISTS`).\n\nWebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)\n\n## RAG 평가\n\n고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자...",
+      "score" : 7.031184E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1184,
+      "snippet" : "<!-- 데모 코퍼스용: DECISIONS.md의 핵심 아키텍처 결정(1~12장)만 포함. 시스템 자기서술(평가/프롬프트/라우팅/agent 13~18장)은 자가오염 방지를 위해 제외함. -->\n# 기술 선택 기록 (DECISIONS)\n\n이 문서는 `rag-assistant` 프로젝트에서 내린 주요 설계·기술 선택과 그 이유를 정리합니다.\n\n## 1. 프로젝...",
+      "score" : 3.619467E-5
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1251,
+      "snippet" : "ents\",\"arguments\":{...}}` | 도구 호출 시작 |\n| `step` | `{\"index\":1,\"phase\":\"tool_result\",\"tool\":\"search_documents\",\"resultSummary\":\"8 sources\"}` | 도구 결과 |\n| `delta` | `{\"text\":\"...\"}` | 최종 답 토큰(청크) |\n| `do...",
+      "score" : 2.5466403E-5
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 1005,
+      "snippet" : "` — 모드별 최신 결과\n- `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)\n- `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)\n\n수동 측정 기록 (자동화 이전):\n\n- [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — b...",
+      "score" : 2.411114E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1200,
+      "snippet" : "→ min-score 필터\n- `PromptBuilder`: `[규칙]:`·출구 1·2·3·`[Context]` user 프롬프트; `NO_ANSWER_MESSAGE` = \"문서에서 확인할 수 없는 질문입니다.\"; Context는 `[출처: 문서명]`만 LLM에 전달\n- `OllamaService`: `contentPrompt`(system) — 한국어·`...",
+      "score" : 2.2299198E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 2.161314E-5
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1188,
+      "snippet" : "으로 다루기 쉬움\n\n### Chroma를 쓰지 않은 이유\n- RAG 입문에는 Chroma가 더 빠를 수 있음\n- **이미 PostgreSQL이 있고**, Spring Boot + JDBC와 맞추려면 pgvector가 더 적합\n\n## 4. Spring AI 사용 여부\n\n### 선택\n- RAG 파이프라인(chunking · retrieval · prompt ·...",
+      "score" : 2.0948188E-5
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1284,
+      "snippet" : "s=[]`·no-answer 문구여야 만점 |\n| `mustGrounded` / `minSourceCount` | 사실·정책 문항의 grounded·출처 하한 |\n| `mustContainAll` / `mustContainAny` | 기대 키워드 (전부 / 일부) |\n| `mustNotContain` | 금지·환각 키워드 (위반 시 0점, `failReas...",
+      "score" : 1.9373936E-5
+    } ],
+    "noAnswer" : false,
+    "score" : 0,
+    "maxScore" : 2,
+    "failReasons" : [ "expectNoAnswer but grounded=true", "expectNoAnswer but sources not empty", "expectNoAnswer but answer is not no-answer phrase", "sources above maxSourceCount" ]
+  }, {
+    "id" : 10,
+    "category" : "C_NO_ANSWER",
+    "question" : "fine-tuning을 했나?",
+    "mode" : "RAG_ON",
+    "answer" : "이 Q&A 어시스턴트는 한국어로 답하는 한국어 Q&A 어시스턴트입니다. \n\n**Q&A**\n\n1. **문서에서 확인할 수 없는 질문입니다.**\n   - [Context]에 없으면 \"문서에는 ○○에 대한 내용이 없습니다.\"로 짧게 말합니다.\n2. **partially-found 질문**\n   - [Context]에 여러 해석이 가능할 때, [Context]에 근거한 해석 1~2개를 짧게 적고, \"○○인지 △△인지 구체적으로 질문해 주세요.\"로 끝내세요.\n3. **chunk-based 답변**\n   - chunk가 많다고 질문과 무관한 내용으로 답하지 마세요.\n4. **no-answer**\n   - [Context]가 없거나 score가 낮으면 **no-answer**로답합니다.\n5. **API/UX 정책**\n\n### 응답 정책\n\n- 검색된 context만 근거로 답변\n-context가 없거나 score가 낮으면 **no-answer**\n- 가능하면 **출처 문서명 / snippet** 포함\n- API 오류는 `ErrorResponse(error, message)` + HTTP 상태 코드로 통일\n\n### 초기 UI\n\n- 먼저 API 완성\n- 이후 간단한 업로드 + 채팅 UI 추가\n\n### Chunking 정책 (2026-06)\n\n[출처: DECISIONS.md]\n·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시 새 구현체(예: `RoutingChatModelClient`)를 `@Primary`로 추가하고 빈 와이어링만 바꾼다 → 소비자 코드 불변.\n- **분리 단위:** chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n### Streaming Response (2026-06)\n\n[출처: ARCHITECTURE.md]\n저 UI (`static/`), Swagger, `local` 프로필 debug API\n- RAG 평가 자동화: `eval/questions.json` 고정 세트 → `RagEvalRunner`(CLI 플래그) → `eval/reports/` JSON·MD (§11)\n- RAG 품질 기록: [`RAG_EVAL_v1.md`](RAG_EVAL_v1.md) · [`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md) · [`RAG_EVAL_v2.md`](RAG_EVAL_v2.md)\n\n### 예외 처리·문서 정책 (2026-06)\n\n### Ollama 오류\n\n- `OllamaService.postForMap()`: chat/embed 공통 HTTP 호출\n- 연결 실패 (`ResourceAccessException`) → 503 `OLLAMA_UNAVAILABLE`\n\n[출처: README.md]\nwn 리포트로 남깁니다.\n\n```bash\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_OFF\"\n# provider 비교 (한 번에execute → compare-providers.md 생성)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag.eval.providers=ollama-7b,ollama-1b,groq\"\n```\n\n[Question]\nfine-tuning을 했나?\n[Answer]\n```",
+    "grounded" : true,
+    "sources" : [ {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1192,
+      "snippet" : "스케일·라우팅 관심사가 달라 인터페이스를 둘로 나눔(chat만 외부로 빼고 embedding은 로컬 유지 같은 시나리오 대비). dimension 검증 등 RAG 정책은 인터페이스가 아니라 `EmbeddingService`에 유지.\n\n## 5. API / UX 정책\n\n### 응답 정책\n- 검색된 context만 근거로 답변\n- context가 없거나 sco...",
+      "score" : 4.0924744E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1191,
+      "snippet" : "·라우팅을 **지금 붙이지 않음**.\n- **이유:** 모델 호출 지점을 한 곳으로 모아 교체·확장 seam을 만든다. 확장 시 새 구현체(예: `RoutingChatModelClient`)를 `@Primary`로 추가하고 빈 와이어링만 바꾼다 → 소비자 코드 불변.\n- **분리 단위:** chat·embedding은 모델·스케일·라우팅 관심사가 달라 인터...",
+      "score" : 2.5118678E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1208,
+      "snippet" : "PDFBox 3.x: `Loader.loadPDF` → 페이지별 `PDFTextStripper`\n- `setSortByPosition(true)` — 다단/표 읽기 순서 1차 개선\n- 페이지 구분자 `--- Page N ---` — chunk·출처 snippet 힌트\n- 텍스트 0자(스캔 PDF) → `DocumentParseException`, OCR *...",
+      "score" : 2.1318757E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1203,
+      "snippet" : "chunk·top-k로 정책 질문(6·7번) 안정화 ([`RAG_EVAL_v1.1.md`](RAG_EVAL_v1.1.md))\n- min-score는 Java filter (SQL WHERE 미적용), 후보 단계에만 적용 (rerank score엔 미적용 — §14)\n- RAG on/off 10문항 비교 완료 ([`RAG_EVAL_v2.md`](RAG_EVA...",
+      "score" : 2.098831E-4
+    }, {
+      "documentName" : "DECISIONS.md",
+      "chunkId" : 1213,
+      "snippet" : "url은?」— DECISIONS 1순위, `grounded: true` |\n| hybrid on 회귀 | 동일 질문 — 순위·답변 동일 (vector가 이미 충분) |\n| no-answer 회귀 | 「2025년 매출」— no-answer, `sources: []` |\n| lexical-stress | `nomic-embed-text` — vector 1위 ...",
+      "score" : 1.896174E-4
+    }, {
+      "documentName" : "ARCHITECTURE.md",
+      "chunkId" : 1224,
+      "snippet" : "저 UI (`static/`), Swagger, `local` 프로필 debug API\n- RAG 평가 자동화: `eval/questions.json` 고정 세트 → `RagEvalRunner`(CLI 플래그) → `eval/reports/` JSON·MD (§11)\n- RAG 품질 기록: [`RAG_EVAL_v1.md`](RAG_EVAL_v1.md) · ...",
+      "score" : 1.673405E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 1005,
+      "snippet" : "` — 모드별 최신 결과\n- `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)\n- `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)\n\n수동 측정 기록 (자동화 이전):\n\n- [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — b...",
+      "score" : 1.5720345E-4
+    }, {
+      "documentName" : "README.md",
+      "chunkId" : 998,
+      "snippet" : "wn 리포트로 남깁니다.\n\n```bash\n# RAG on (검색 + no-answer 정책)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=true --rag.eval.mode=RAG_ON\"\n# RAG off (LLM만, 대조군)\ngradlew.bat bootRun --args=\"--rag.eval.enabled=tru...",
+      "score" : 1.5236755E-4
+    } ],
+    "noAnswer" : false,
+    "score" : 0,
+    "maxScore" : 2,
+    "failReasons" : [ "expectNoAnswer but grounded=true", "expectNoAnswer but sources not empty", "expectNoAnswer but answer is not no-answer phrase", "sources above maxSourceCount" ]
+  } ],
+  "provider" : "ollama-1b",
+  "avgLatencyMs" : 8424
+}
