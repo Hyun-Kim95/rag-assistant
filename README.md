@@ -1,22 +1,22 @@
 # RAG Assistant
 
-> Spring Boot 기반 RAG 검색·생성 엔진 (hybrid + rerank, 출처 인용)
+> Spring Boot 기반 RAG 백엔드 — 검색·생성(hybrid + rerank, 출처 인용)부터 Model Router·tool calling 에이전트·음성 콜봇(근거 없으면 상담원 전환)까지
 
 Ollama와 PostgreSQL pgvector로 업로드 문서를 검색해 답하는 Spring Boot RAG 백엔드입니다. 검색·생성·출처 인용 파이프라인을 REST API로 제공합니다.  
-문서를 업로드하면 chunk → embedding → 검색 → 생성 순으로 처리하고, 답변과 함께 출처(sources)·`grounded` 여부를 반환합니다.
+문서를 업로드하면 chunk → embedding → 검색 → 생성 순으로 처리하고, 답변과 함께 출처(sources)·`grounded` 여부를 반환합니다. 같은 RAG·에이전트 자산을 음성 채널로 확장해, AI가 먼저 응대하고 근거를 찾지 못하면 상담원으로 전환(handoff)하는 음성 콜봇까지 제공합니다([Voice RAG](#voice-rag-음성-콜봇)).
 
 **스택:** Java 17, Spring Boot, Gradle, Ollama (`qwen2.5:7b`, `nomic-embed-text`), PostgreSQL + pgvector 
 검색: hybrid(`pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`) + rerank(TEI cross-encoder `bge-reranker-v2-m3`, `rag.rerank-enabled` 기본 `true`, 미기동 시 fallback) 
-라우팅: Model Router — chat 추론을 다중 provider로 분기·폴백(Ollama primary + OpenAI 호환 SaaS leg, 예: Groq). 설정/요청 기준 라우팅, 실패 시 자동 폴백 ([`DECISIONS.md`](docs/DECISIONS.md) §15). 옵트인으로 **난이도 기반 라우팅**(`llm.routing-strategy: difficulty` — 분류기 `qwen2.5:3b`로 질문을 EASY/HARD 판정 → 작은/큰 모델 분기, 기본은 `fixed`) ([§16](docs/DECISIONS.md))
-에이전트: tool calling 에이전트 — LLM이 필요 시 도구(`search_documents`·`list_documents`·`read_document`·`summarize_document`)를 스스로 호출해 멀티스텝으로 답을 구성. 멀티턴 대화 메모리(무상태 `messages[]`)와 스트리밍 스텝 UI(`POST /api/agent`·`/api/agent/stream`, [`DECISIONS.md`](docs/DECISIONS.md) §17·§18)
+라우팅: Model Router — chat 추론을 다중 provider로 분기·폴백(Ollama primary + OpenAI 호환 SaaS leg, 예: Groq). 설정/요청 기준 라우팅, 실패 시 자동 폴백 (`[DECISIONS.md](docs/DECISIONS.md)` §15). 옵트인으로 **난이도 기반 라우팅**(`llm.routing-strategy: difficulty` — 분류기 `qwen2.5:3b`로 질문을 EASY/HARD 판정 → 작은/큰 모델 분기, 기본은 `fixed`) ([§16](docs/DECISIONS.md))
+에이전트: tool calling 에이전트 — LLM이 필요 시 도구(`search_documents`·`list_documents`·`read_document`·`summarize_document`)를 스스로 호출해 멀티스텝으로 답을 구성. 멀티턴 대화 메모리(무상태 `messages[]`)와 스트리밍 스텝 UI(`POST /api/agent`·`/api/agent/stream`, `[DECISIONS.md](docs/DECISIONS.md)` §17·§18)
 
-설계·선택 이유: [`docs/DECISIONS.md`](docs/DECISIONS.md) · API·DB·설정: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+설계·선택 이유: `[docs/DECISIONS.md](docs/DECISIONS.md)` · API·DB·설정: `[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)`
 
 ## Demo
 
 문서 업로드 후 RAG 질의·출처·no-answer 동작 (~45초 분량).
 
-<img width="1216" height="742" alt="Image" src="https://github.com/user-attachments/assets/1e1830a6-3e13-4a6d-b255-7d9659e46fc5" />
+
 
 ## 실행
 
@@ -33,30 +33,32 @@ ollama pull nomic-embed-text
 docker compose up -d tei-reranker   # BAAI/bge-reranker-v2-m3, http://localhost:8085
 ```
 
-1. PostgreSQL 준비 — 예: `pgvector/pgvector:pg16`, `localhost:15432`, DB `rag_assistant`  
-   extension·테이블·인덱스는 수동 DDL ([`ARCHITECTURE.md`](docs/ARCHITECTURE.md) §6, hybrid 시 [`DECISIONS.md`](docs/DECISIONS.md) §11)
+1. PostgreSQL 준비 — 예: `pgvector/pgvector:pg16`, `localhost:15432`, DB `rag_assistant`
+  extension·테이블·인덱스는 수동 DDL (`[ARCHITECTURE.md](docs/ARCHITECTURE.md)` §6, hybrid 시 `[DECISIONS.md](docs/DECISIONS.md)` §11)
 2. (선택·기본 on) TEI reranker 기동 — `docker compose up -d tei-reranker`
-   미기동 시 rerank를 건너뛰고 원본 검색 순서로 동작 (fallback)
+  미기동 시 rerank를 건너뛰고 원본 검색 순서로 동작 (fallback)
 3. `cp application-local.yml.example application-local.yml` 후 DB 비밀번호 입력
 4. `gradlew.bat bootRun` (또는 `./gradlew bootRun`)
-5. http://localhost:8080 — 문서 업로드 후 채팅
+5. [http://localhost:8080](http://localhost:8080) — 문서 업로드 후 채팅
 
 Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 
 ## API (핵심)
 
-| Method | Path | 설명 |
-| --- | --- | --- |
-| `POST` | `/api/documents/upload` | 문서 업로드 + 인덱싱 |
-| `GET` | `/api/documents` | 문서 목록 |
-| `DELETE` | `/api/documents/{id}` | 문서 삭제 |
-| `POST` | `/api/chat` | RAG 응답 (JSON). 선택 `provider` 지정 시 해당 leg 우선, 응답에 `provider` 포함 |
-| `POST` | `/api/chat/stream` | RAG 스트리밍 (SSE). default 라우팅(요청 provider 미적용·폴백 없음) |
-| `POST` | `/api/agent` | tool calling 에이전트. LLM이 도구(검색·목록·본문 읽기·요약)를 호출해 멀티스텝 응답 (`answer`·`sources`·`grounded`·`steps`·`stopReason`). 선택 `provider`·멀티턴 `messages[]` ([`DECISIONS.md`](docs/DECISIONS.md) §17·§18) |
-| `POST` | `/api/agent/stream` | 에이전트 스트리밍 (SSE). `step`(도구 호출/결과) → `delta`(최종 답) → `done` 순서, 빈 `message`는 스트림 전 400 ([§18](docs/DECISIONS.md)) |
-| `GET` | `/api/health` | 앱 + 의존성 상태. db DOWN 또는 chat provider 0개 UP → `DOWN`·503, reranker만 DOWN → `DEGRADED`·200. `dependencies`에 provider별 상태 |
 
-`local` 프로필: Swagger http://localhost:8080/swagger-ui.html, debug API (`/api/debug/...`)
+| Method   | Path                    | 설명                                                                                                                                                                                         |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST`   | `/api/documents/upload` | 문서 업로드 + 인덱싱                                                                                                                                                                               |
+| `GET`    | `/api/documents`        | 문서 목록                                                                                                                                                                                      |
+| `DELETE` | `/api/documents/{id}`   | 문서 삭제                                                                                                                                                                                      |
+| `POST`   | `/api/chat`             | RAG 응답 (JSON). 선택 `provider` 지정 시 해당 leg 우선, 응답에 `provider` 포함                                                                                                                             |
+| `POST`   | `/api/chat/stream`      | RAG 스트리밍 (SSE). default 라우팅(요청 provider 미적용·폴백 없음)                                                                                                                                         |
+| `POST`   | `/api/agent`            | tool calling 에이전트. LLM이 도구(검색·목록·본문 읽기·요약)를 호출해 멀티스텝 응답 (`answer`·`sources`·`grounded`·`steps`·`stopReason`). 선택 `provider`·멀티턴 `messages[]` (`[DECISIONS.md](docs/DECISIONS.md)` §17·§18) |
+| `POST`   | `/api/agent/stream`     | 에이전트 스트리밍 (SSE). `step`(도구 호출/결과) → `delta`(최종 답) → `done` 순서, 빈 `message`는 스트림 전 400 ([§18](docs/DECISIONS.md))                                                                           |
+| `GET`    | `/api/health`           | 앱 + 의존성 상태. db DOWN 또는 chat provider 0개 UP → `DOWN`·503, reranker만 DOWN → `DEGRADED`·200. `dependencies`에 provider별 상태                                                                     |
+
+
+`local` 프로필: Swagger [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html), debug API (`/api/debug/...`)
 
 ## MCP Server (stdio)
 
@@ -90,9 +92,9 @@ gradlew.bat bootJar   # build/libs/rag-assistant-0.0.1-SNAPSHOT.jar
 }
 ```
 
-> **`<repo>`는 절대 경로로 치환**(예: `D:/cursor/rag-assistant`). MCP 클라이언트는 임의의 작업 디렉터리에서 jar를 실행하므로 jar·설정 경로 모두 절대 경로를 권장합니다.
+> `<repo>`**는 절대 경로로 치환**(예: `D:/cursor/rag-assistant`). MCP 클라이언트는 임의의 작업 디렉터리에서 jar를 실행하므로 jar·설정 경로 모두 절대 경로를 권장합니다.
 >
-> **`tools/call`(DB 의존)에 `,local` + `config.additional-location`이 필요한 이유:** DB 비밀번호는 git 제외 파일 `application-local.yml`(프로젝트 루트, `on-profile: local`)에 있습니다. `mcp-stdio` 단독 실행은 이 파일을 로드하지 않아 `Failed to obtain JDBC Connection`이 납니다. `,local`로 해당 프로파일을 켜고, `config.additional-location`으로 클라이언트 cwd와 무관하게 그 파일을 찾게 합니다. (`initialize`/`tools/list` 핸드셰이크만 볼 거면 `--spring.profiles.active=mcp-stdio`만으로 충분합니다.)
+> `tools/call`**(DB 의존)에** `,local` **+** `config.additional-location`**이 필요한 이유:** DB 비밀번호는 git 제외 파일 `application-local.yml`(프로젝트 루트, `on-profile: local`)에 있습니다. `mcp-stdio` 단독 실행은 이 파일을 로드하지 않아 `Failed to obtain JDBC Connection`이 납니다. `,local`로 해당 프로파일을 켜고, `config.additional-location`으로 클라이언트 cwd와 무관하게 그 파일을 찾게 합니다. (`initialize`/`tools/list` 핸드셰이크만 볼 거면 `--spring.profiles.active=mcp-stdio`만으로 충분합니다.)
 >
 > stdout은 JSON-RPC 전용이며, 로그는 `logback-spring.xml`의 `mcp-stdio` 프로파일에서 stderr로 분리해 프로토콜 오염을 막습니다.
 
@@ -106,6 +108,8 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 
 > DB 의존 도구(`list_documents`·`search_documents` 등)까지 스모크하려면 Postgres·Ollama 기동 후 위 jar 인자에 `,local`과 `--spring.config.additional-location=optional:file:<repo>/`를 더해 실행합니다.
 
+
+
 ## Voice RAG (음성 콜봇)
 
 > 브라우저 마이크 → 실시간 STT → tool calling agent(멀티턴·RAG) → TTS 음성 응답.
@@ -118,18 +122,43 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 - **상담원 전환:** `grounded=false` 2회 연속 → 환각 대신 handoff
 - **수치화:** 턴별 `stt_ms/llm_ms/tts_ms/ttfb_ms`를 `call_turns`에 적재 → 병목 분석
 - **개인정보 마스킹:** 전화/이메일/주민·카드번호를 마스킹 후 저장(`user_text_masked`)
-- **폴백:** LLM(Groq→Ollama)·TTS(Google→브라우저)·STT(클라우드→브라우저)
+- **폴백:** LLM(Groq→Ollama)·TTS(Google→브라우저). STT는 브라우저 Web Speech API 단일(미지원·차단 시 통화 불가)
 
-**실행:** RAG 환경 기동 후 `gradlew.bat bootRun` → http://localhost:8080/voice.html  
+
+
+### 통화 로그 (재현 가능한 백엔드 증거)
+
+실제 통화의 `call_turns`/`call_sessions` 적재 결과 — 음성 없이도 동작을 검증할 수 있는 구조화 로그입니다.
+
+**① 턴별 지연·근거 판정** — 답할 수 있으면 답하고(`grounded=true`), 못 찾으면 정직하게 `false`. 턴별 STT/LLM/TTS/TTFB(ms)를 `call_turns`에 적재.
+
+![턴별 지연·근거](docs/assets/voice/voice-turns.png)
+
+**② 상담원 전환(handoff)** — `grounded=false` 2회 연속 → 환각 대신 전환. `call_sessions.final_state=HANDOFF` / `handoff_reason=NO_ANSWER_X2`로 영속화되고, 해당 세션 턴 내역에서 원인이 보입니다.
+
+![handoff 세션 목록](docs/assets/voice/voice-handoff-sessions.png)
+
+![handoff 턴 내역](docs/assets/voice/voice-handoff-turns.png)
+
+**③ 개인정보(PII) 마스킹** — 저장 전 전화·이메일·주민·카드번호를 치환. 원문 `010-1234-5678` → 저장값 `[전화번호]`.
+
+![PII 마스킹](docs/assets/voice/voice-pii.png)
+
+> 위 지연(`llm_ms`/`ttfb_ms`)은 로컬 `qwen2.5:7b` 콜드 로드 기준이라 수십 초까지 늘 수 있습니다. `llm.default-provider: groq` 사용 시 첫 응답이 ~1.5초 수준으로 단축됩니다([RAG 평가](#rag-평가) 참조).
+
+**실행:** RAG 환경 기동 후 `gradlew.bat bootRun` → [http://localhost:8080/voice.html](http://localhost:8080/voice.html)  
 (STT는 **Chrome/Edge** 권장, LLM은 `llm.default-provider: groq` 권장. Google TTS 미설정 시 브라우저 TTS 폴백.)  
 `call_sessions`·`call_turns`는 앱 시작 시 `schema.sql`로 자동 생성됩니다(`IF NOT EXISTS`).
 
-WebSocket 이벤트·DB 스키마·측정 상세: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (§5 Voice · §6 call_sessions/call_turns)
+WebSocket 이벤트·DB 스키마·측정 상세: `[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)` (§5 Voice · §6 call_sessions/call_turns)
 
 ## RAG 평가
 
 고정 질문 세트(`eval/questions.json`)로 RAG 파이프라인 품질을 **자동 측정**합니다.
 각 문항의 `score`·`grounded`·`sources`·`noAnswer`를 룰 기반으로 채점해 JSON/Markdown 리포트로 남깁니다.
+
+> **최신 결과(10문항, 재현 가능):** RAG **on 20/20** vs **off 0/20** (`[eval/reports/compare-latest.md](eval/reports/compare-latest.md)`).
+> provider 비교: ollama-7b **20/20**(~~62s) · ollama-1b **11/20**(~~8s) · groq **18/20**(~1.5s) (`[compare-providers.md](eval/reports/compare-providers.md)`) — 로컬 큰 모델이 최고 품질, groq가 최저 지연.
 
 ```bash
 # RAG on (검색 + no-answer 정책)
@@ -158,13 +187,17 @@ gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag
 
 - `latest-rag-on.{json,md}` / `latest-rag-off.{json,md}` — 모드별 최신 결과
 - `compare-latest.md` — on/off 점수 비교표 (둘 다 실행 시)
+- `latest-rag-on-{provider}.{json,md}` — provider 강제 실행 결과 (예: groq, ollama-7b)
+- `compare-providers.md` — provider 비교표 (≥2개 실행 시)
 - `runs/{timestamp}_{MODE}.{json,md}` — 실행 이력 (gitignore, 로컬 튜닝용)
 
 수동 측정 기록 (자동화 이전):
 
-- [`docs/RAG_EVAL_v1.md`](docs/RAG_EVAL_v1.md) — baseline
-- [`docs/RAG_EVAL_v1.1.md`](docs/RAG_EVAL_v1.1.md) — FAQ chunk·prompt 개선
-- [`docs/RAG_EVAL_v2.md`](docs/RAG_EVAL_v2.md) — RAG on vs off (자동 재현 기준)
+- `[docs/RAG_EVAL_v1.md](docs/RAG_EVAL_v1.md)` — baseline
+- `[docs/RAG_EVAL_v1.1.md](docs/RAG_EVAL_v1.1.md)` — FAQ chunk·prompt 개선
+- `[docs/RAG_EVAL_v2.md](docs/RAG_EVAL_v2.md)` — RAG on vs off (자동 재현 기준)
+
+
 
 ## 한계
 
@@ -173,3 +206,4 @@ gradlew.bat bootRun --args="--rag.eval.enabled=true --rag.eval.mode=RAG_ON --rag
 - 클라우드 배포 없음 (로컬 실행)
 - PDF는 텍스트 레이어만 지원 (스캔본 OCR 없음)
 - DB schema migration은 repo에 없음 (로컬 수동 DDL)
+
