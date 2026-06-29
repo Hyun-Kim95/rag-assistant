@@ -2,6 +2,7 @@ package com.example.ragassistant.llm;
 
 import com.example.ragassistant.exception.OllamaResponseException;
 import com.example.ragassistant.exception.OllamaUnavailableException;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -29,14 +30,16 @@ public class OllamaChatClient implements ChatModelClient {
     private final String model;
     private final String name;
     private final double temperature;
+    private final QueryTelemetryContext telemetry;
 
     public OllamaChatClient(RestClient ollamaRestClient, ObjectMapper objectMapper,
-                            String model, String name, double temperature) {
+                            String model, String name, double temperature, QueryTelemetryContext telemetry) {
         this.ollamaRestClient = ollamaRestClient;
         this.objectMapper = objectMapper;
         this.model = model;
         this.name = name;
         this.temperature = temperature;
+        this.telemetry = telemetry;
     }
 
     @Override
@@ -65,6 +68,7 @@ public class OllamaChatClient implements ChatModelClient {
             throw new OllamaResponseException("Ollama chat 응답에 message 필드가 없습니다.");
         }
         if (response.get("message") instanceof Map<?, ?> messageMap && messageMap.get("content") != null) {
+            recordTokens(asInt(response.get("prompt_eval_count")), asInt(response.get("eval_count")));
             return messageMap.get("content").toString();
         }
         throw new OllamaResponseException("Ollama chat 응답 형식이 예상과 다릅니다.");
@@ -109,12 +113,18 @@ public class OllamaChatClient implements ChatModelClient {
                                     "Ollama HTTP 오류: " + response.getStatusCode().value() + " uri=/api/chat");
                         }
                         StringBuilder full = new StringBuilder();
+                        Integer pTok = null;
+                        Integer cTok = null;
                         try (BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
                             String line;
                             while ((line = reader.readLine()) != null) {
                                 if (line.isBlank()) continue;
                                 JsonNode root = objectMapper.readTree(line);
+                                if (root.path("done").asBoolean(false)) {
+                                    if (root.has("prompt_eval_count")) pTok = root.get("prompt_eval_count").asInt();
+                                    if (root.has("eval_count")) cTok = root.get("eval_count").asInt();
+                                }
                                 JsonNode contentNode = root.path("message").path("content");
                                 if (contentNode.isMissingNode() || contentNode.isNull()) continue;
                                 String piece = contentNode.asText();
@@ -123,6 +133,7 @@ public class OllamaChatClient implements ChatModelClient {
                                 onDelta.accept(piece);
                             }
                         }
+                        recordTokens(pTok, cTok);
                         return full.toString();
                     });
         } catch (ResourceAccessException ex) {
@@ -132,5 +143,15 @@ public class OllamaChatClient implements ChatModelClient {
         } catch (Exception ex) {
             throw new OllamaResponseException("Ollama stream 처리 중 오류", ex);
         }
+    }
+
+    private void recordTokens(Integer prompt, Integer completion) {
+        if (telemetry != null) {
+            telemetry.recordTokens(prompt, completion);
+        }
+    }
+
+    private static Integer asInt(Object o) {
+        return o instanceof Number n ? n.intValue() : null;
     }
 }

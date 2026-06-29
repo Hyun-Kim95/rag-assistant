@@ -56,7 +56,7 @@ class RetrieverTest {
 
     private Retriever retriever(RagProperties props) {
         return new Retriever(embeddingService, embeddingRepository, chunkRepository, props, reranker,
-                new QueryTelemetryContext());
+                new QueryTelemetryContext(null));
     }
 
     /**

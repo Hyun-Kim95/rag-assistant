@@ -1,3 +1,22 @@
+metrics:
+  enabled: true
+  cost:
+    # 운영 비용 추정용 단가(1K 토큰당, USD). 사용자 과금과 무관.
+    currency: USD
+    providers:
+      groq:                      # llama-3.1-8b-instant: $0.05/1M in, $0.08/1M out (groq.com/pricing, 2026-06)
+        prompt-per-1k: 0.00005
+        completion-per-1k: 0.00008
+      ollama-7b:                 # 로컬(self-host) = 금전 비용 0
+        prompt-per-1k: 0.0
+        completion-per-1k: 0.0
+      ollama-1b:
+        prompt-per-1k: 0.0
+        completion-per-1k: 0.0
+      ollama:                    # agent 채널 ollama provider 이름(AppConfig ollamaAgentClient)
+        prompt-per-1k: 0.0
+        completion-per-1k: 0.0
+
 spring:
   application:
     name: rag-assistant

@@ -13,11 +13,14 @@ import com.example.ragassistant.llm.agent.AgentTurn;
 import com.example.ragassistant.llm.agent.ToolCall;
 import com.example.ragassistant.llm.agent.ToolCallEcho;
 import com.example.ragassistant.llm.agent.ToolSpec;
+import com.example.ragassistant.observability.NoAnswerReason;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.example.ragassistant.service.RagService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -75,13 +78,15 @@ public class AgentOrchestrator {
     private final ToolRegistry toolRegistry;
     private final AgentProperties props;
     private final ObjectMapper objectMapper;
+    private final QueryTelemetryContext telemetry;
 
     public AgentOrchestrator(AgentChatClient agentChatClient, ToolRegistry toolRegistry,
-                             AgentProperties props, ObjectMapper objectMapper) {
+                             AgentProperties props, ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
         this.agentChatClient = agentChatClient;
         this.toolRegistry = toolRegistry;
         this.props = props;
         this.objectMapper = objectMapper;
+        this.telemetry = telemetry;
     }
 
     public AgentResponse run(String message, String provider) {
@@ -103,7 +108,17 @@ public class AgentOrchestrator {
         if (!StringUtils.hasText(message)) {
             throw new IllegalArgumentException("message가 비어 있습니다.");
         }
+        // agent 인터랙션 1건의 지표 수집 시작. 모든 종료 경로는 finalize()를 거쳐 결과를 적재한다.
+        telemetry.begin(MDC.get("requestId"));
+        telemetry.recordChannel("agent");
+        try {
+            return runLoop(message, provider, history, handler);
+        } finally {
+            telemetry.endAndLog();
+        }
+    }
 
+    private AgentResponse runLoop(String message, String provider, List<ConversationTurn> history, AgentStreamHandler handler) {
         List<AgentMessage> conv = new ArrayList<>();
         conv.add(AgentMessage.system(SYSTEM));
         seedHistory(conv, history);                                 // T-B: 이전 대화(최근 N턴)
@@ -257,6 +272,14 @@ public class AgentOrchestrator {
         boolean noAnswer = !"FINAL".equals(stopReason) || isNoAnswer(answer);
         List<SourceCitation> sourceList = noAnswer ? List.of() : new ArrayList<>(sources.values());
         boolean grounded = !sourceList.isEmpty();
+
+        // query_logs 적재용 결과 스냅샷(토큰·단계지연은 루프 중 telemetry에 이미 누적됨).
+        telemetry.recordProvider(provider);
+        telemetry.recordStopReason(stopReason);
+        Double topScore = sourceList.isEmpty() ? null : sourceList.get(0).score();
+        telemetry.recordResult(sourceList.size(), topScore, grounded,
+                grounded ? null : NoAnswerReason.LLM_NO_ANSWER);
+
         return new AgentResponse(answer, sourceList, grounded, provider, stopReason, steps);
     }
 

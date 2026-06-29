@@ -1,6 +1,7 @@
 package com.example.ragassistant.llm;
 
 import com.example.ragassistant.config.OllamaProperties;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +29,10 @@ public class DifficultyClassifier {
 
     private final OllamaChatClient classifier;
 
-    public DifficultyClassifier(RestClient ollamaRestClient, ObjectMapper objectMapper, OllamaProperties props) {
+    public DifficultyClassifier(RestClient ollamaRestClient, ObjectMapper objectMapper, OllamaProperties props,
+                                QueryTelemetryContext telemetry) {
         this.classifier = new OllamaChatClient(ollamaRestClient, objectMapper,
-                props.classifierModel(), "difficulty-classifier", 0.0);
+                props.classifierModel(), "difficulty-classifier", 0.0, telemetry);
     }
 
     public DifficultyTier classify(String question) {

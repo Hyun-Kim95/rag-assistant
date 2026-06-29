@@ -36,7 +36,7 @@ class RerankerTest {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://tei");
         server = MockRestServiceServer.bindTo(builder).build();
         // 활성 telemetry 컨텍스트 없이 record*는 no-op → 실제 인스턴스로 충분
-        reranker = new Reranker(builder.build(), new QueryTelemetryContext());
+        reranker = new Reranker(builder.build(), new QueryTelemetryContext(null));
     }
 
     /**

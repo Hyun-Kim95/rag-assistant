@@ -2,6 +2,7 @@ package com.example.ragassistant.llm.agent;
 
 import com.example.ragassistant.exception.LlmResponseException;
 import com.example.ragassistant.exception.LlmUnavailableException;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -28,14 +29,16 @@ public class OllamaAgentClient implements AgentChatClient {
     private final String model;
     private final String name;
     private final double temperature;
+    private final QueryTelemetryContext telemetry;
 
     public OllamaAgentClient(RestClient ollamaRestClient, ObjectMapper objectMapper,
-                             String model, String name, double temperature) {
+                             String model, String name, double temperature, QueryTelemetryContext telemetry) {
         this.ollamaRestClient = ollamaRestClient;
         this.objectMapper = objectMapper;
         this.model = model;
         this.name = name;
         this.temperature = temperature;
+        this.telemetry = telemetry;
     }
 
     @Override
@@ -60,7 +63,9 @@ public class OllamaAgentClient implements AgentChatClient {
                     .body(body)
                     .retrieve()
                     .body(String.class);
-            return parse(readTree(raw));
+            JsonNode res = readTree(raw);
+            recordTokens(res);
+            return parse(res);
         } catch (ResourceAccessException ex) {
             throw new LlmUnavailableException("agent provider 연결 불가: " + name, ex);
         } catch (HttpStatusCodeException ex) {
@@ -70,6 +75,16 @@ public class OllamaAgentClient implements AgentChatClient {
             // 응답 추출 단계 타임아웃 등도 '닿을 수 없음'으로 분류 → 폴백 대상
             throw new LlmUnavailableException("agent provider 응답 처리 실패: " + name, ex);
         }
+    }
+
+    // Ollama 응답 루트의 prompt_eval_count/eval_count → 인터랙션 토큰 누적(provider 미제공 시 null)
+    private void recordTokens(JsonNode res) {
+        if (telemetry == null || res == null) {
+            return;
+        }
+        Integer prompt = res.has("prompt_eval_count") ? res.get("prompt_eval_count").asInt() : null;
+        Integer completion = res.has("eval_count") ? res.get("eval_count").asInt() : null;
+        telemetry.recordTokens(prompt, completion);
     }
 
     private JsonNode readTree(String raw) {

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 통화 세션·턴 로그 영속화. 기존 JdbcTemplate 패턴을 따른다.
@@ -41,5 +42,19 @@ public class CallLogRepository {
                         """,
                 turn.sessionId(), turn.turnIndex(), turn.userTextMasked(), turn.answerText(), turn.grounded(),
                 turn.sttMs(), turn.llmMs(), turn.ttsMs(), turn.ttfbMs(), Timestamp.valueOf(LocalDateTime.now()));
+    }
+
+    /**
+     * 통화 세션 집계: handoff율·완료율. 0건이면 avg는 null.
+     */
+    public Map<String, Object> summarizeSessions(LocalDateTime from, LocalDateTime to) {
+        return jdbcTemplate.queryForMap("""
+                        SELECT count(*)                                                  AS sessions,
+                               avg(CASE WHEN final_state = 'HANDOFF'   THEN 1 ELSE 0 END) AS handoff_rate,
+                               avg(CASE WHEN final_state = 'COMPLETED' THEN 1 ELSE 0 END) AS completion_rate
+                        FROM call_sessions
+                        WHERE started_at BETWEEN ? AND ?
+                        """,
+                Timestamp.valueOf(from), Timestamp.valueOf(to));
     }
 }

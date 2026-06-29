@@ -3,6 +3,7 @@ package com.example.ragassistant.config;
 import com.example.ragassistant.llm.ChatModelClient;
 import com.example.ragassistant.llm.OllamaChatClient;
 import com.example.ragassistant.llm.agent.OllamaAgentClient;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.example.ragassistant.parser.DocumentParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,7 +18,8 @@ import java.util.concurrent.Executors;
 
 @Configuration
 @EnableConfigurationProperties({OllamaProperties.class, RagProperties.class, RerankerProperties.class,
-        RoutingProperties.class, OpenAiCompatProperties.class, AgentProperties.class, VoiceProperties.class})
+        RoutingProperties.class, OpenAiCompatProperties.class, AgentProperties.class, VoiceProperties.class,
+        MetricsProperties.class})
 public class AppConfig {
 
     @Bean
@@ -69,22 +71,6 @@ public class AppConfig {
                 .build();
     }
 
-    // ollama-7b: 기본/강한 leg
-    @Bean
-    ChatModelClient ollama7bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
-                                       ObjectMapper objectMapper) {
-        return new OllamaChatClient(ollamaRestClient, objectMapper,
-                properties.chatModel(), "ollama-7b", properties.temperature());
-    }
-
-    // ollama-1b: 작은/빠른 leg + 난이도 분류기 재사용. 구체 타입 반환 → DifficultyClassifier가 @Qualifier로 주입.
-    @Bean
-    OllamaChatClient ollama1bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
-                                        ObjectMapper objectMapper) {
-        return new OllamaChatClient(ollamaRestClient, objectMapper,
-                properties.smallChatModel(), "ollama-1b", properties.temperature());
-    }
-
     @Bean
     DocumentParser documentParser() {
         return new DocumentParser();
@@ -99,14 +85,30 @@ public class AppConfig {
     // agent 전용 Ollama leg (tool calling). 기존 ollama7bChatClient와 동일 모델·RestClient 재사용.
     @Bean
     OllamaAgentClient ollamaAgentClient(RestClient ollamaRestClient, ObjectMapper objectMapper,
-                                        OllamaProperties properties) {
+                                        OllamaProperties properties, QueryTelemetryContext telemetry) {
         return new OllamaAgentClient(ollamaRestClient, objectMapper,
-                properties.chatModel(), "ollama", properties.temperature());
+                properties.chatModel(), "ollama", properties.temperature(), telemetry);
     }
 
     // SSE 스트리밍 동안 orchestrator 루프를 요청 스레드와 분리해 실행
     @Bean(destroyMethod = "shutdown")
     ExecutorService agentStreamExecutor() {
         return Executors.newCachedThreadPool();
+    }
+
+    // ollama-7b: 기본/강한 leg
+    @Bean
+    ChatModelClient ollama7bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
+                                       ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
+        return new OllamaChatClient(ollamaRestClient, objectMapper,
+                properties.chatModel(), "ollama-7b", properties.temperature(), telemetry);
+    }
+
+    // ollama-1b: 작은/빠른 leg + 난이도 분류기 재사용. 구체 타입 반환 → DifficultyClassifier가 @Qualifier로 주입.
+    @Bean
+    OllamaChatClient ollama1bChatClient(RestClient ollamaRestClient, OllamaProperties properties,
+                                        ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
+        return new OllamaChatClient(ollamaRestClient, objectMapper,
+                properties.smallChatModel(), "ollama-1b", properties.temperature(), telemetry);
     }
 }

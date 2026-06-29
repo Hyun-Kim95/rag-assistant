@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * 요청 스코프 관측 지표 수집기 (ThreadLocal).
  * - RAG 진입점(RagService)이 begin → finally endAndLog 로 감싼다.
@@ -18,7 +20,34 @@ public class QueryTelemetryContext {
 
     private static final Logger log = LoggerFactory.getLogger("rag.telemetry");
 
+    private final QueryLogWriter writer;
+
     private final ThreadLocal<QueryTelemetry> holder = new ThreadLocal<>();
+
+    public QueryTelemetryContext(QueryLogWriter writer) {
+        this.writer = writer;
+    }
+
+    public void recordTokens(Integer prompt, Integer completion) {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.addTokens(prompt, completion);
+        }
+    }
+
+    public void recordChannel(String channel) {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.setChannel(channel);
+        }
+    }
+
+    public void recordStopReason(String stopReason) {
+        QueryTelemetry t = holder.get();
+        if (t != null) {
+            t.setStopReason(stopReason);
+        }
+    }
 
     public void begin(String requestId) {
         holder.set(new QueryTelemetry(requestId));
@@ -123,6 +152,15 @@ public class QueryTelemetryContext {
                     t.fallbackUsed(),
                     t.difficulty() == null ? "-" : t.difficulty());
         } finally {
+            if (writer != null) {
+                writer.write(new QueryLog(
+                        t.requestId(), t.channel(), t.provider(), t.grounded(),
+                        t.noAnswerReason() == null ? null : t.noAnswerReason().name(),
+                        t.hitCount(), t.topScore(),
+                        t.embeddingMs(), t.retrievalMs(), t.rerankMs(), t.generationMs(), t.totalMs(),
+                        t.rerankFallback(), t.promptTokens(), t.completionTokens(),
+                        t.stopReason(), LocalDateTime.now()));
+            }
             holder.remove();
         }
     }

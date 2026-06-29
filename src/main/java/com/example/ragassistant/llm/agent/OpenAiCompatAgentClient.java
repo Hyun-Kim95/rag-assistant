@@ -3,6 +3,7 @@ package com.example.ragassistant.llm.agent;
 import com.example.ragassistant.config.OpenAiCompatProperties;
 import com.example.ragassistant.exception.LlmResponseException;
 import com.example.ragassistant.exception.LlmUnavailableException;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -32,11 +33,14 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
     private final RestClient client;
     private final OpenAiCompatProperties props;
     private final ObjectMapper objectMapper;
+    private final QueryTelemetryContext telemetry;
 
-    public OpenAiCompatAgentClient(RestClient openAiCompatRestClient, OpenAiCompatProperties props, ObjectMapper objectMapper) {
+    public OpenAiCompatAgentClient(RestClient openAiCompatRestClient, OpenAiCompatProperties props,
+                                   ObjectMapper objectMapper, QueryTelemetryContext telemetry) {
         this.client = openAiCompatRestClient;
         this.props = props;
         this.objectMapper = objectMapper;
+        this.telemetry = telemetry;
     }
 
     @Override
@@ -68,7 +72,9 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
                     .body(body)
                     .retrieve()
                     .body(String.class);
-            return parse(readTree(raw));
+            JsonNode res = readTree(raw);
+            recordUsage(res);
+            return parse(res);
         } catch (ResourceAccessException ex) {
             throw new LlmUnavailableException("agent provider 연결 불가: " + name(), ex);
         } catch (HttpStatusCodeException ex) {
@@ -77,6 +83,20 @@ public class OpenAiCompatAgentClient implements AgentChatClient {
             throw new LlmResponseException(
                     "agent provider HTTP 오류: " + name() + " status=" + ex.getStatusCode().value(), ex);
         }
+    }
+
+    // usage.prompt_tokens/completion_tokens → 인터랙션 토큰 누적(provider 미제공 시 null)
+    private void recordUsage(JsonNode res) {
+        if (telemetry == null || res == null) {
+            return;
+        }
+        JsonNode u = res.path("usage");
+        if (u.isMissingNode() || u.isNull()) {
+            return;
+        }
+        Integer prompt = u.has("prompt_tokens") ? u.get("prompt_tokens").asInt() : null;
+        Integer completion = u.has("completion_tokens") ? u.get("completion_tokens").asInt() : null;
+        telemetry.recordTokens(prompt, completion);
     }
 
     /** 응답 본문(String)을 Jackson 2 트리로 파싱. 비었거나 깨지면 응답 오류로 분류. */

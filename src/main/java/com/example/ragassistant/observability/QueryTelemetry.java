@@ -22,6 +22,10 @@ public class QueryTelemetry {
     private String provider;                // 실제 답변한 chat provider 이름 (null = LLM 미호출)
     private boolean fallbackUsed;           // 폴백으로 다른 leg가 응답했는지
     private String difficulty;              // 난이도 라우팅 시 분류 결과(EASY/HARD), 아니면 null
+    private Integer promptTokens;           // provider 미제공 시 null 유지
+    private Integer completionTokens;
+    private String channel = "chat";        // 기본 chat. agent 경로에서 setChannel("agent")
+    private String stopReason;              // agent 전용(FINAL 등), chat은 null
 
     QueryTelemetry(String requestId) {
         this.requestId = requestId;
@@ -74,6 +78,28 @@ public class QueryTelemetry {
         this.difficulty = difficulty;
     }
 
+    /**
+     * 여러 LLM 호출(난이도 분류 + 본답)을 합산. interaction 전체 토큰을 본다.
+     */
+    void addTokens(Integer prompt, Integer completion) {
+        if (prompt != null) {
+            this.promptTokens = (this.promptTokens == null ? 0 : this.promptTokens) + prompt;
+        }
+        if (completion != null) {
+            this.completionTokens = (this.completionTokens == null ? 0 : this.completionTokens) + completion;
+        }
+    }
+
+    void setChannel(String channel) {
+        if (channel != null) {
+            this.channel = channel;
+        }
+    }
+
+    void setStopReason(String stopReason) {
+        this.stopReason = stopReason;
+    }
+
     int hitCount() {
         return hitCount;
     }
@@ -120,5 +146,21 @@ public class QueryTelemetry {
 
     String difficulty() {
         return difficulty;
+    }
+
+    Integer promptTokens() {
+        return promptTokens;
+    }
+
+    Integer completionTokens() {
+        return completionTokens;
+    }
+
+    String channel() {
+        return channel;
+    }
+
+    String stopReason() {
+        return stopReason;
     }
 }

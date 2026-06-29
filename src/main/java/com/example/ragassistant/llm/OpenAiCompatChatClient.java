@@ -3,6 +3,7 @@ package com.example.ragassistant.llm;
 import com.example.ragassistant.config.OpenAiCompatProperties;
 import com.example.ragassistant.exception.LlmResponseException;
 import com.example.ragassistant.exception.LlmUnavailableException;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -23,10 +24,13 @@ public class OpenAiCompatChatClient implements ChatModelClient {
 
     private final RestClient client;
     private final OpenAiCompatProperties props;
+    private final QueryTelemetryContext telemetry;
 
-    public OpenAiCompatChatClient(RestClient openAiCompatRestClient, OpenAiCompatProperties props) {
+    public OpenAiCompatChatClient(RestClient openAiCompatRestClient, OpenAiCompatProperties props,
+                                  QueryTelemetryContext telemetry) {
         this.client = openAiCompatRestClient;
         this.props = props;
+        this.telemetry = telemetry;
     }
 
     @Override
@@ -56,6 +60,7 @@ public class OpenAiCompatChatClient implements ChatModelClient {
                     .body(body)
                     .retrieve()
                     .body(Map.class);
+            recordUsage(res);
             return extractContent(res);
         } catch (ResourceAccessException ex) {
             throw new LlmUnavailableException("provider 연결 불가: " + name(), ex);
@@ -63,6 +68,17 @@ public class OpenAiCompatChatClient implements ChatModelClient {
             throw new LlmResponseException(
                     "provider HTTP 오류: " + name() + " status=" + ex.getStatusCode().value(), ex);
         }
+    }
+
+    private void recordUsage(Map<?, ?> res) {
+        if (telemetry == null || res == null || !(res.get("usage") instanceof Map<?, ?> usage)) {
+            return;
+        }
+        telemetry.recordTokens(asInt(usage.get("prompt_tokens")), asInt(usage.get("completion_tokens")));
+    }
+
+    private static Integer asInt(Object o) {
+        return o instanceof Number n ? n.intValue() : null;
     }
 
     @Override
@@ -75,7 +91,9 @@ public class OpenAiCompatChatClient implements ChatModelClient {
         return answer;
     }
 
-    /** choices[0].message.content 추출, 단계별 null/형식 방어. */
+    /**
+     * choices[0].message.content 추출, 단계별 null/형식 방어.
+     */
     private String extractContent(Map<?, ?> res) {
         if (res == null) {
             throw new LlmResponseException("provider 응답 body가 null: " + name());

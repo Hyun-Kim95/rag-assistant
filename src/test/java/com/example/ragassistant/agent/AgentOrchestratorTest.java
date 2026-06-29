@@ -11,6 +11,7 @@ import com.example.ragassistant.llm.agent.AgentChatClient;
 import com.example.ragassistant.llm.agent.AgentMessage;
 import com.example.ragassistant.llm.agent.AgentTurn;
 import com.example.ragassistant.llm.agent.ToolCall;
+import com.example.ragassistant.observability.QueryTelemetryContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +56,8 @@ class AgentOrchestratorTest {
     }
 
     private AgentOrchestrator orchestrator(AgentProperties props) {
-        return new AgentOrchestrator(agentChatClient, toolRegistry, props, objectMapper);
+        return new AgentOrchestrator(agentChatClient, toolRegistry, props, objectMapper,
+                new QueryTelemetryContext(null));
     }
 
     @Test
