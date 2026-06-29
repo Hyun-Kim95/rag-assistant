@@ -9,6 +9,7 @@ Ollama와 PostgreSQL pgvector로 업로드 문서를 검색해 답하는 Spring 
 검색: hybrid(`pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`) + rerank(TEI cross-encoder `bge-reranker-v2-m3`, `rag.rerank-enabled` 기본 `true`, 미기동 시 fallback) 
 라우팅: Model Router — chat 추론을 다중 provider로 분기·폴백(Ollama primary + OpenAI 호환 SaaS leg, 예: Groq). 설정/요청 기준 라우팅, 실패 시 자동 폴백 (`[DECISIONS.md](docs/DECISIONS.md)` §15). 옵트인으로 **난이도 기반 라우팅**(`llm.routing-strategy: difficulty` — 분류기 `qwen2.5:3b`로 질문을 EASY/HARD 판정 → 작은/큰 모델 분기, 기본은 `fixed`) ([§16](docs/DECISIONS.md))
 에이전트: tool calling 에이전트 — LLM이 필요 시 도구(`search_documents`·`list_documents`·`read_document`·`summarize_document`)를 스스로 호출해 멀티스텝으로 답을 구성. 멀티턴 대화 메모리(무상태 `messages[]`)와 스트리밍 스텝 UI(`POST /api/agent`·`/api/agent/stream`, `[DECISIONS.md](docs/DECISIONS.md)` §17·§18)
+관측성: chat/agent 인터랙션을 `query_logs`에 적재하고, `GET /api/metrics/summary`로 품질(grounded/no-answer)·지연(P50/P95/P99)·토큰·추정 비용·채널별 North Star를 집계. 읽기 전용 대시보드 `/metrics.html` 제공 (`[ARCHITECTURE.md](docs/ARCHITECTURE.md)` §12)
 
 설계·선택 이유: `[docs/DECISIONS.md](docs/DECISIONS.md)` · API·DB·설정: `[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)`
 
@@ -56,6 +57,8 @@ Ollama·RAG 설정은 `src/main/resources/application.yml`만 수정합니다.
 | `POST`   | `/api/agent`            | tool calling 에이전트. LLM이 도구(검색·목록·본문 읽기·요약)를 호출해 멀티스텝 응답 (`answer`·`sources`·`grounded`·`steps`·`stopReason`). 선택 `provider`·멀티턴 `messages[]` (`[DECISIONS.md](docs/DECISIONS.md)` §17·§18) |
 | `POST`   | `/api/agent/stream`     | 에이전트 스트리밍 (SSE). `step`(도구 호출/결과) → `delta`(최종 답) → `done` 순서, 빈 `message`는 스트림 전 400 ([§18](docs/DECISIONS.md))                                                                           |
 | `GET`    | `/api/health`           | 앱 + 의존성 상태. db DOWN 또는 chat provider 0개 UP → `DOWN`·503, reranker만 DOWN → `DEGRADED`·200. `dependencies`에 provider별 상태                                                                     |
+| `GET`    | `/api/metrics/summary`  | 지표 집계. 기간·채널(`chat`·`agent`·`voice`·`all`)별 품질(grounded/no-answer)·지연(P50/P95/P99)·토큰·추정 비용·신뢰(handoff/완료율)·North Star. `metrics.enabled=false`면 404 (`[ARCHITECTURE.md](docs/ARCHITECTURE.md)` §12) |
+| `GET`    | `/api/metrics/timeseries` | 추이(드리프트). 기간을 `bucket`(day/week/hour)으로 쪼갠 버킷별 품질·지연·토큰·검색점수 시계열. 대시보드 추이 차트용 |
 
 
 `local` 프로필: Swagger [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html), debug API (`/api/debug/...`)
