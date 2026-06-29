@@ -56,6 +56,19 @@ public class AppConfig {
                 .build();
     }
 
+    // 음성 STT(Groq Whisper) 전용 RestClient — multipart 업로드. read timeout은 전사 지연 대비 상향.
+    @Bean
+    RestClient sttRestClient(VoiceProperties properties) {
+        var stt = properties.stt();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofMillis(stt.timeoutMs()));
+        return RestClient.builder()
+                .baseUrl(stt.baseUrl())
+                .requestFactory(factory)
+                .build();
+    }
+
     // ollama-7b: 기본/강한 leg
     @Bean
     ChatModelClient ollama7bChatClient(RestClient ollamaRestClient, OllamaProperties properties,

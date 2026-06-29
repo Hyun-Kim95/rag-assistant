@@ -112,7 +112,7 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 
 ## Voice RAG (음성 콜봇)
 
-> 브라우저 마이크 → 실시간 STT → tool calling agent(멀티턴·RAG) → TTS 음성 응답.
+> 브라우저 마이크 → STT(브라우저 Web Speech, 비면 Groq Whisper 폴백) → tool calling agent(멀티턴·RAG) → TTS 음성 응답.
 > 못 풀면 **상담원 전환(handoff)**, 통화는 **구간별 지연·PII 마스킹** 로그로 남습니다.
 
 기존 RAG·tool-calling 자산을 음성·실시간 도메인으로 확장한 PoC입니다. 신규는 WebSocket Voice Gateway(`/ws/voice`) 하나이며 agent·RAG·DB는 그대로 재사용합니다.
@@ -122,7 +122,7 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 - **상담원 전환:** `grounded=false` 2회 연속 → 환각 대신 handoff
 - **수치화:** 턴별 `stt_ms/llm_ms/tts_ms/ttfb_ms`를 `call_turns`에 적재 → 병목 분석
 - **개인정보 마스킹:** 전화/이메일/주민·카드번호를 마스킹 후 저장(`user_text_masked`)
-- **폴백:** LLM(Groq→Ollama)·TTS(Google→브라우저). STT는 브라우저 Web Speech API 단일(미지원·차단 시 통화 불가)
+- **폴백:** LLM(Groq→Ollama)·TTS(Google→브라우저)·**STT(브라우저 Web Speech→Groq Whisper)**. STT는 브라우저 인식이 1차이며, 인식이 비었을 때만 서버가 발화 오디오를 Groq로 폴백 전사한다(`voice.stt.enabled`, 기본 off면 브라우저 단독). 정상 환경에서는 클라우드를 호출하지 않아 환각·지연·쿼터 소모를 피하고, Web Speech가 막히는 환경에서는 클라우드 폴백이 받쳐 준다
 
 
 
@@ -147,7 +147,7 @@ java -jar build\libs\rag-assistant-0.0.1-SNAPSHOT.jar --spring.profiles.active=m
 > 위 지연(`llm_ms`/`ttfb_ms`)은 로컬 `qwen2.5:7b` 콜드 로드 기준이라 수십 초까지 늘 수 있습니다. `llm.default-provider: groq` 사용 시 첫 응답이 ~1.5초 수준으로 단축됩니다([RAG 평가](#rag-평가) 참조).
 
 **실행:** RAG 환경 기동 후 `gradlew.bat bootRun` → [http://localhost:8080/voice.html](http://localhost:8080/voice.html)  
-(STT는 **Chrome/Edge** 권장, LLM은 `llm.default-provider: groq` 권장. Google TTS 미설정 시 브라우저 TTS 폴백.)  
+(발화 구간 감지는 **Chrome/Edge**(Web Speech) 권장, LLM은 `llm.default-provider: groq` 권장. 클라우드 STT 폴백은 `voice.stt.enabled: true` + Groq 키(`llm.openai-compat.api-key` 재사용) 시 활성(브라우저 인식이 빌 때만 사용), 미설정 시 브라우저 STT 단독. Google TTS 미설정 시 브라우저 TTS 폴백.)  
 `call_sessions`·`call_turns`는 앱 시작 시 `schema.sql`로 자동 생성됩니다(`IF NOT EXISTS`).
 
 WebSocket 이벤트·DB 스키마·측정 상세: `[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)` (§5 Voice · §6 call_sessions/call_turns)

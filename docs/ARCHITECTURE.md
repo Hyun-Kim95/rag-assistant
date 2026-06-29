@@ -305,18 +305,22 @@ HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 
 |---|---|---|
 | WebSocket | `/ws/voice` | 음성 통화 게이트웨이(양방향). 연결 시 `call_session` 생성, 종료 시 `final_state`·`ended_at` 기록 |
 
-브라우저가 Web Speech API로 STT를 수행하므로 오디오가 아닌 **인식 텍스트**를 전송한다. 서버는 tool calling agent(`AgentOrchestrator.runStreaming`)로 답을 만든다. 세션 단위 대화 이력을 함께 넘겨 **멀티턴**(후속 질문 맥락 유지)을 지원하고, 검색은 agent가 `search_documents` 도구로 수행한다. TTS는 Google → 브라우저 폴백.
+STT는 **브라우저 Web Speech 1차 + 클라우드(Groq Whisper) 폴백**이다. 브라우저 인식 텍스트가 있으면 서버는 그대로 사용해, 정상 환경(Chrome/Edge)에서 클라우드 오작동(짧은 무음 구간의 환각 등)이 정확한 인식 결과를 덮어쓰지 않게 한다. 클라우드 활성(`voice.stt.enabled=true`) 시 클라이언트는 발화 오디오를 **바이너리 프레임**으로 보낸 뒤 `user_utterance`(브라우저 인식 텍스트)를 보낸다. 서버는 **브라우저 인식이 비었을 때만**(예: Web Speech 차단 환경) 그 오디오를 Groq로 폴백 전사한다(`GroqSttService.transcribe` → null이면 빈 발화로 무시). 비활성/오디오 없음이면 브라우저 텍스트 경로(하위호환). 브라우저 Web Speech는 클라우드 모드에서도 **발화 구간 감지(VAD)** 로 계속 쓰인다. 이후 서버는 tool calling agent(`AgentOrchestrator.runStreaming`)로 답을 만든다. 세션 대화 이력을 함께 넘겨 **멀티턴**을 지원하고, 검색은 agent가 `search_documents` 도구로 수행한다. TTS는 Google → 브라우저 폴백.
 
-클라이언트 → 서버 (JSON):
+클라이언트 → 서버:
 
-| type | payload | 설명 |
+| 종류 | payload | 설명 |
 |---|---|---|
-| `user_utterance` | `{ "text": "...", "sttMs": 1234 }` | 최종 인식 텍스트 + 브라우저 측정 STT 지연 |
+| 바이너리 | 오디오(webm/opus) | 발화 오디오. 직후 `user_utterance`와 짝지어 서버에서 Groq 전사(클라우드 STT 활성 시에만 전송) |
+| `user_utterance` | `{ "text": "...", "sttMs": 1234, "hasAudio": true }` | 브라우저 인식 텍스트(1차) + 브라우저 측정 STT 지연 + 오디오 동반 여부(폴백용) |
+| `barge_in` | `{ }` | 봇 발화 중 사용자 끼어듦 → LISTENING 복귀 |
 
 서버 → 클라이언트 (JSON `VoiceEvent`):
 
 | type | payload | 설명 |
 |---|---|---|
+| `stt.mode` | `{ "text": "cloud" }` | 연결 직후 1회. `cloud`면 클라이언트가 오디오도 녹음·전송(브라우저 인식이 빌 때 폴백용), `browser`면 텍스트만 |
+| `stt.final` | `{ "text": "..." }` | 브라우저 인식이 비어 클라우드(Groq) 폴백 전사를 쓴 경우에만 → 사용자 말풍선 생성/보정 |
 | `state` | `{ "state": "THINKING" }` | 상태 전이(`IDLE`/`LISTENING`/`THINKING`/`SPEAKING`/`HANDOFF`) |
 | `answer.delta` | `{ "text": "..." }` | agent 최종 답 조각(생성 완료 후 delta) |
 | `answer.done` | `{ "answer": "...", "sources": [...], "grounded": true }` | 최종 답(`ChatResponse` 필드) |
@@ -396,7 +400,7 @@ HTTP 상태·error 코드·no-answer 등 전체 매핑은 **§9 예외 / 상태 
 
 **구간 지연 (`call_turns`)**
 - `llm_ms`(RAG+LLM 스트림), `tts_ms`(TTS 합성), `ttfb_ms`(발화 처리~첫 `answer.delta`)는 서버 측정.
-- `stt_ms`는 브라우저 STT가 측정해 `user_utterance`로 전달한다.
+- `stt_ms`는 브라우저 발화 구간(VAD) 측정값이며, 클라우드 STT 사용 시 서버 전사 소요(Groq 왕복)를 더해 실제 체감 지연을 반영한다.
 - 로그 저장 실패는 통화를 막지 않는다(세션 생성/턴 저장/종료 기록 모두 예외 흡수).
 
 ## 7. 설정값

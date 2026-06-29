@@ -25,6 +25,25 @@
     let currentAudio = null;
     let awaitingAnswer = false;   // THINKING~answer.done 사이: 오디오(filler)가 끝나도 LISTENING 대신 THINKING 유지
 
+    // --- 클라우드 STT 폴백(서버 Groq Whisper) ---
+    // 브라우저 Web Speech 인식이 1차다. 서버가 stt.mode=cloud면 발화 오디오도 MediaRecorder로 함께 녹음·전송해,
+    // 브라우저 인식이 비었을 때(예: Web Speech 차단 환경) 서버가 Groq로 폴백 전사하도록 한다.
+    let cloudStt = false;
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recChunks = [];
+    let lastUserEl = null;        // 직전 사용자 말풍선(stt.final로 보정)
+    const recMime = pickRecMime();
+
+    function pickRecMime() {
+        if (!window.MediaRecorder) return "";
+        const cands = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+        for (const m of cands) {
+            try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {}
+        }
+        return "";
+    }
+
     function setState(s) {
         els.state.textContent = s;
         els.state.dataset.state = s;
@@ -57,6 +76,18 @@
 
     function handleEvent(ev) {
         switch (ev.event) {
+            case "stt.mode":
+                // 서버가 클라우드 STT 활성 여부를 알린다. cloud면 마이크 스트림을 준비한다.
+                cloudStt = (ev.text === "cloud") && !!recMime;
+                if (cloudStt) ensureMicStream();
+                break;
+            case "stt.final":
+                // 브라우저 인식이 비어 클라우드(Groq)로 폴백 전사된 경우 — 말풍선이 없으면 새로 만들고, 있으면 보정.
+                if (ev.text) {
+                    if (lastUserEl) lastUserEl.textContent = ev.text;
+                    else lastUserEl = appendMsg("user", ev.text);
+                }
+                break;
             case "state":
                 setState(ev.state);
                 if (ev.state === "THINKING") awaitingAnswer = true;
@@ -97,7 +128,10 @@
         recog.interimResults = true;
 
         let speechStartAt = 0;   // stt_ms 측정: 말소리 시작 시각
-        recog.onspeechstart = () => { speechStartAt = performance.now(); };
+        recog.onspeechstart = () => {
+            speechStartAt = performance.now();
+            startSegment();   // 클라우드 STT면 이 발화 구간의 오디오 녹음 시작
+        };
 
         recog.onresult = (e) => {
             let interim = "";
@@ -114,10 +148,11 @@
             if (finalText.trim()) {
                 els.partial.textContent = "";
                 if (speaking) bargeIn();
-                appendMsg("user", finalText.trim());
+                const text = finalText.trim();
+                lastUserEl = appendMsg("user", text);   // 브라우저 텍스트 즉시 표시(클라우드 확정 시 보정)
                 const sttMs = speechStartAt ? Math.round(performance.now() - speechStartAt) : 0;
                 speechStartAt = 0;
-                ws.send(JSON.stringify({ type: "user_utterance", text: finalText.trim(), sttMs }));
+                sendUtterance(text, sttMs);
             }
         };
 
@@ -133,6 +168,57 @@
             }
             // no-speech/aborted 등 일시적 오류는 onend의 재시작에 맡긴다.
         };
+    }
+
+    // --- 클라우드 STT 녹음(MediaRecorder) ---
+    // 마이크 스트림은 통화당 1회 확보(Web Speech와 동시 사용). 실패 시 cloudStt 해제 → 텍스트 폴백.
+    async function ensureMicStream() {
+        if (mediaStream || !cloudStt) return;
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (_) {
+            cloudStt = false;   // 마이크 미허용 → 브라우저 텍스트 경로로 graceful degrade
+        }
+    }
+
+    // 발화 시작 시 이 구간의 오디오 녹음을 시작한다.
+    function startSegment() {
+        if (!cloudStt || !mediaStream || mediaRecorder) return;
+        try {
+            mediaRecorder = recMime ? new MediaRecorder(mediaStream, { mimeType: recMime })
+                                    : new MediaRecorder(mediaStream);
+            recChunks = [];
+            mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recChunks.push(e.data); };
+            mediaRecorder.start();
+        } catch (_) {
+            mediaRecorder = null;   // 녹음 불가 → 텍스트 폴백
+        }
+    }
+
+    // 발화 종료(최종 인식): 녹음 중이면 오디오(바이너리) + JSON(hasAudio:true)을 순서대로 보낸다.
+    // 녹음이 없으면 기존처럼 텍스트만 보낸다(브라우저 STT 단독·폴백).
+    function sendUtterance(text, sttMs) {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            const rec = mediaRecorder;
+            mediaRecorder = null;
+            rec.onstop = () => {
+                const blob = new Blob(recChunks, { type: recMime || "audio/webm" });
+                recChunks = [];
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    const hasAudio = blob.size > 0;
+                    if (hasAudio) ws.send(blob);   // 바이너리 먼저
+                    ws.send(JSON.stringify({ type: "user_utterance", text, sttMs, hasAudio }));
+                }
+            };
+            try { rec.stop(); } catch (_) {
+                recChunks = [];
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: "user_utterance", text, sttMs, hasAudio: false }));
+                }
+            }
+        } else if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "user_utterance", text, sttMs, hasAudio: false }));
+        }
     }
 
     // TTS로 읽기 전 마크다운·코드 서식·기호를 사람이 듣기 좋은 형태로 정제
@@ -199,6 +285,8 @@
         if (callActive) return;
         callActive = true;
         sttBlocked = false;
+        cloudStt = false;
+        lastUserEl = null;
         els.startBtn.disabled = true;
         els.stopBtn.disabled = false;
         connect();
@@ -212,6 +300,11 @@
         els.startBtn.disabled = false;
         els.stopBtn.disabled = true;
         if (recog) try { recog.stop(); } catch (_) {}
+        if (mediaRecorder) try { mediaRecorder.stop(); } catch (_) {}
+        mediaRecorder = null;
+        recChunks = [];
+        if (mediaStream) try { mediaStream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+        mediaStream = null;
         if (ws) ws.close();
         stopPlayback();
         speaking = false;

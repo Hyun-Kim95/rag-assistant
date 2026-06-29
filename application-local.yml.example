@@ -42,3 +42,11 @@ spring:
 #   openai-compat:
 #     enabled: true
 #     api-key: gsk_your_groq_key
+
+# === 음성 클라우드 STT (Groq Whisper, 선택) ===
+# 기본 off → 브라우저 Web Speech 단독. 켜면 브라우저 인식이 비었을 때 클라우드(Groq)로 폴백 전사한다.
+# api-key는 위 llm.openai-compat.api-key(Groq)를 그대로 재사용한다(별도 키 불필요).
+# Web Speech가 막히는 환경(예: Cursor 내장 브라우저 network 오류)에서도 클라우드 STT는 동작한다.
+# voice:
+#   stt:
+#     enabled: true

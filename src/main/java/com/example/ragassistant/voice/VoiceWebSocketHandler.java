@@ -20,6 +20,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +28,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
- * 음성 통화 WebSocket 핸들러: 브라우저 STT/TTS, 서버는 텍스트→tool calling agent(멀티턴) 중계.
- * 수신(JSON): {type:"user_utterance", text:"...", sttMs:n} | {type:"barge_in"}
- * 송신: VoiceEvent (state / answer.delta / answer.done / handoff / error) + 오디오 바이너리
+ * 음성 통화 WebSocket 핸들러: STT/TTS, 서버는 텍스트→tool calling agent(멀티턴) 중계.
+ * STT는 브라우저 Web Speech 1차 + 클라우드(Groq Whisper) 폴백. 브라우저 인식이 비었을 때만 서버가 오디오를 전사한다.
+ * 수신(바이너리): 발화 오디오(webm/opus) — 직후 user_utterance와 짝지어, 브라우저 인식이 없을 때만 서버 전사에 사용.
+ * 수신(JSON): {type:"user_utterance", text:"<브라우저 인식 텍스트>", sttMs:n, hasAudio:bool} | {type:"barge_in"}
+ * 송신: VoiceEvent (stt.mode / stt.final / state / answer.delta / answer.done / handoff / error) + 오디오 바이너리
  * 부가: 세션 단위 대화 메모리(멀티턴) + 통화 세션·턴 로그(PII 마스킹) + 구간 지연 기록.
  */
 @Component
@@ -42,6 +45,8 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     private static final String ATTR_FINAL_STATE = "finalState";
     private static final String ATTR_HANDOFF_REASON = "handoffReason";
     private static final String ATTR_HISTORY = "history";
+    private static final String ATTR_PENDING_AUDIO = "pendingAudio";   // 직전 바이너리 프레임(발화 오디오) 버퍼
+    private static final String ATTR_SEND_LOCK = "sendLock";           // 세션 단위 전송 직렬화 잠금
     private static final int HANDOFF_NO_ANSWER_THRESHOLD = 2;
 
     private final AgentOrchestrator agentOrchestrator;
@@ -50,18 +55,25 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     private final GoogleTtsService googleTtsService;
     private final CallLogRepository callLogRepository;
     private final PiiMasker piiMasker;
+    private final GroqSttService sttService;
 
     // agentStreamExecutor(cached pool) 재사용 — 통화 턴 처리를 수신 스레드와 분리.
     public VoiceWebSocketHandler(AgentOrchestrator agentOrchestrator, ObjectMapper objectMapper,
                                  @Qualifier("agentStreamExecutor") ExecutorService executor,
                                  GoogleTtsService googleTtsService,
-                                 CallLogRepository callLogRepository, PiiMasker piiMasker) {
+                                 CallLogRepository callLogRepository, PiiMasker piiMasker,
+                                 GroqSttService sttService) {
         this.agentOrchestrator = agentOrchestrator;
         this.objectMapper = objectMapper;
         this.executor = executor;
         this.googleTtsService = googleTtsService;
         this.callLogRepository = callLogRepository;
         this.piiMasker = piiMasker;
+        this.sttService = sttService;
+    }
+
+    /** 전사 결과(클라우드 또는 브라우저 폴백)와 STT 소요(ms). */
+    private record ResolvedUtterance(String text, int sttMs, boolean cloud) {
     }
 
     private static long msSince(long startNanos) {
@@ -70,6 +82,7 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        session.getAttributes().put(ATTR_SEND_LOCK, new Object());
         session.getAttributes().put(ATTR_NO_ANSWER_STREAK, 0);
         session.getAttributes().put(ATTR_TURN_INDEX, 0);
         session.getAttributes().put(ATTR_HISTORY, new ArrayList<ConversationTurn>());
@@ -80,7 +93,21 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
             // 로그 저장 실패가 통화를 막지 않도록 흡수(이후 턴 기록은 sessionId 없으면 skip).
             log.warn("call session 생성 실패 → 로그 없이 통화 진행: {}", e.getMessage());
         }
+        // 클라이언트가 오디오 녹음·전송 여부를 결정할 수 있도록 STT 모드를 먼저 알린다.
+        send(session, VoiceEvent.sttMode(sttService.available() ? "cloud" : "browser"));
         send(session, VoiceEvent.state(CallState.LISTENING));
+    }
+
+    /**
+     * 발화 오디오(바이너리) 수신: 직후 도착할 user_utterance와 짝지어 전사하도록 세션에 버퍼링.
+     * (WebSocket은 메시지 순서를 보존하므로 바이너리 → user_utterance 순서가 보장된다.)
+     */
+    @Override
+    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
+        ByteBuffer buf = message.getPayload();
+        byte[] audio = new byte[buf.remaining()];
+        buf.get(audio);
+        session.getAttributes().put(ATTR_PENDING_AUDIO, audio);
     }
 
     @Override
@@ -89,8 +116,17 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
             JsonNode node = objectMapper.readTree(message.getPayload());
             String type = node.path("type").asText("");
             switch (type) {
-                case "user_utterance" -> onUtterance(session, node.path("text").asText(""),
-                        node.path("sttMs").asInt(0));
+                case "user_utterance" -> {
+                    ResolvedUtterance r = resolveUtterance(session,
+                            node.path("text").asText(""),
+                            node.path("sttMs").asInt(0),
+                            node.path("hasAudio").asBoolean(false));
+                    // 클라우드 전사를 쓴 경우 클라이언트 말풍선을 확정 텍스트로 보정.
+                    if (r.cloud()) {
+                        send(session, VoiceEvent.sttFinal(r.text()));
+                    }
+                    onUtterance(session, r.text(), r.sttMs());
+                }
                 // barge-in: 클라이언트가 TTS를 멈추고 서버는 LISTENING으로 복귀.
                 // (진행 중 LLM 스트림의 서버측 취소 전파는 확장 — 현재는 클라이언트 중단으로 흡수)
                 case "barge_in" -> send(session, VoiceEvent.state(CallState.LISTENING));
@@ -99,6 +135,30 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
         } catch (IOException e) {
             send(session, VoiceEvent.error("BAD_MESSAGE", "메시지 형식이 올바르지 않습니다."));
         }
+    }
+
+    /**
+     * 발화 텍스트 확정: 브라우저 Web Speech 인식 1차(정확·저지연), 인식이 비었을 때만 클라우드(Groq) 전사로 폴백.
+     * 브라우저 인식이 있으면 클라우드를 호출하지 않아 환각·지연·쿼터 소모를 피한다.
+     * 클라우드 폴백을 쓰면 STT 소요에 서버 전사 시간을 더해 체감 지연을 반영한다. 오디오 버퍼는 항상 소비(제거)한다.
+     */
+    private ResolvedUtterance resolveUtterance(WebSocketSession session, String browserText,
+                                               int browserSttMs, boolean hasAudio) {
+        Object pending = session.getAttributes().remove(ATTR_PENDING_AUDIO);
+        // 브라우저 인식이 있으면 그대로 사용 — 정상 환경(Chrome/Edge)에서 클라우드 오작동이 덮어쓰지 않게 한다.
+        if (browserText != null && !browserText.isBlank()) {
+            return new ResolvedUtterance(browserText, browserSttMs, false);
+        }
+        // 브라우저 인식이 비었을 때만(예: Web Speech 차단 환경) 클라우드 전사로 폴백.
+        if (sttService.available() && hasAudio && pending instanceof byte[] audio && audio.length > 0) {
+            long t0 = System.nanoTime();
+            String cloudText = sttService.transcribe(audio, "audio.webm");
+            int cloudMs = (int) msSince(t0);
+            if (cloudText != null && !cloudText.isBlank()) {
+                return new ResolvedUtterance(cloudText, browserSttMs + cloudMs, true);
+            }
+        }
+        return new ResolvedUtterance(browserText, browserSttMs, false);
     }
 
     // 인사·스몰토크 키워드 (짧은 발화에서만 매칭 → 실제 질문 안의 "안녕" 오탐 방지)
@@ -255,7 +315,7 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
      */
     private void sendAudio(WebSocketSession session, byte[] audio) {
         try {
-            synchronized (session) {
+            synchronized (sendLock(session)) {
                 if (session.isOpen()) {
                     session.sendMessage(new BinaryMessage(audio));
                 }
@@ -263,6 +323,11 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
         } catch (IOException e) {
             log.warn("voice audio send failed", e);
         }
+    }
+
+    /** 세션 단위 전송 직렬화용 잠금. WebSocketSession.sendMessage는 동시 호출에 안전하지 않다. */
+    private Object sendLock(WebSocketSession session) {
+        return session.getAttributes().computeIfAbsent(ATTR_SEND_LOCK, k -> new Object());
     }
 
     /**
@@ -296,7 +361,7 @@ public class VoiceWebSocketHandler extends TextWebSocketHandler {
     private void send(WebSocketSession session, VoiceEvent event) {
         try {
             String json = objectMapper.writeValueAsString(event);
-            synchronized (session) {
+            synchronized (sendLock(session)) {
                 if (session.isOpen()) {
                     session.sendMessage(new TextMessage(json));
                 }

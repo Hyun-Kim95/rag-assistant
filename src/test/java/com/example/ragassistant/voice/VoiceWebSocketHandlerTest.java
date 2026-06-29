@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -27,6 +28,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,11 +48,12 @@ class VoiceWebSocketHandlerTest {
     GoogleTtsService googleTtsService; // 기본 synthesize=null → 핸들러가 tts.fallback 경로
     @Mock
     CallLogRepository callLogRepository;
+    @Mock
+    GroqSttService sttService; // 기본 available()=false → 브라우저 텍스트 경로(하위호환)
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PiiMasker piiMasker = new PiiMasker(); // 실제 마스킹 검증
     private VoiceWebSocketHandler handler;
-    private Map<String, Object> attributes;
     private List<String> sentPayloads;
 
     @BeforeEach
@@ -87,9 +90,9 @@ class VoiceWebSocketHandlerTest {
             }
         };
         handler = new VoiceWebSocketHandler(agentOrchestrator, objectMapper, syncExecutor, googleTtsService,
-                callLogRepository, piiMasker);
+                callLogRepository, piiMasker, sttService);
 
-        attributes = new HashMap<>();
+        Map<String, Object> attributes = new HashMap<>();
         sentPayloads = new ArrayList<>();
         lenient().when(session.getAttributes()).thenReturn(attributes);
         lenient().when(session.isOpen()).thenReturn(true);
@@ -112,6 +115,24 @@ class VoiceWebSocketHandlerTest {
     private void utter(String text, int sttMs) throws Exception {
         handler.handleTextMessage(session, new TextMessage(
                 objectMapper.writeValueAsString(Map.of("type", "user_utterance", "text", text, "sttMs", sttMs))));
+    }
+
+    /** 발화 오디오(바이너리) 프레임 수신 시뮬레이션. */
+    private void sendAudio(byte[] audio) {
+        handler.handleBinaryMessage(session, new BinaryMessage(audio));
+    }
+
+    /** 오디오 동반 발화(hasAudio:true): 클라우드 STT 경로 트리거. text는 브라우저 폴백 텍스트. */
+    private void utterWithAudio(String browserText) throws Exception {
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(
+                Map.of("type", "user_utterance", "text", browserText, "hasAudio", true))));
+    }
+
+    /** runStreaming에 전달된 사용자 텍스트(전사 확정값) 캡처. */
+    private String capturedUserText() {
+        ArgumentCaptor<String> c = ArgumentCaptor.forClass(String.class);
+        verify(agentOrchestrator).runStreaming(c.capture(), any(), any(), any());
+        return c.getValue();
     }
 
     /**
@@ -283,5 +304,61 @@ class VoiceWebSocketHandlerTest {
         assertThat(turn.llmMs()).isGreaterThanOrEqualTo(0);
         assertThat(turn.ttsMs()).isGreaterThanOrEqualTo(0);
         assertThat(turn.ttfbMs()).isGreaterThanOrEqualTo(0);
+    }
+
+    // --- STT: 브라우저 1차 + 클라우드(Groq) 폴백 ---
+
+    @Test
+    @DisplayName("브라우저 인식이 있으면 브라우저 텍스트 사용 — 클라우드 미호출(오작동 덮어쓰기 방지)")
+    void browserTextPreferredOverCloud() throws Exception {
+        stubAnswer("환불은 ", grounded("환불은 14일 이내 신청.",
+                new SourceCitation("faq.md", 1L, "## 환불", 0.9)));
+
+        sendAudio(new byte[]{1, 2, 3, 4});
+        utterWithAudio("환불 정책 알려줘");   // 브라우저 인식 정상 → 그대로 사용
+
+        assertThat(capturedUserText()).isEqualTo("환불 정책 알려줘");
+        verify(sttService, never()).transcribe(any(), any());   // 브라우저 인식 있으니 클라우드 호출 안 함
+        assertThat(firstEvent("stt.final")).isNull();           // 보정 이벤트 없음
+    }
+
+    @Test
+    @DisplayName("브라우저 인식이 비면 클라우드(Groq) 전사로 폴백 + stt.final 표시")
+    void cloudFallbackWhenBrowserBlank() throws Exception {
+        when(sttService.available()).thenReturn(true);
+        when(sttService.transcribe(any(), any())).thenReturn("환불 정책 알려줘");
+        stubAnswer("환불은 ", grounded("환불은 14일 이내 신청.",
+                new SourceCitation("faq.md", 1L, "## 환불", 0.9)));
+
+        sendAudio(new byte[]{1, 2, 3, 4});
+        utterWithAudio("");   // 브라우저 인식 비어있음(예: Web Speech 차단 환경)
+
+        assertThat(capturedUserText()).isEqualTo("환불 정책 알려줘");
+        assertThat(firstEvent("stt.final")).isNotNull();
+        assertThat(firstEvent("stt.final").path("text").asText()).isEqualTo("환불 정책 알려줘");
+    }
+
+    @Test
+    @DisplayName("브라우저·클라우드 모두 비면 빈 발화 → 처리하지 않음(에이전트 미호출)")
+    void noTextNoProcessing() throws Exception {
+        when(sttService.available()).thenReturn(true);
+        when(sttService.transcribe(any(), any())).thenReturn(null);   // 클라우드도 실패
+
+        sendAudio(new byte[]{9});
+        utterWithAudio("");   // 브라우저 비어있음
+
+        verify(agentOrchestrator, never()).runStreaming(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("STT 비활성 → 브라우저 텍스트 경로(전사 호출 없음)")
+    void sttDisabledUsesBrowserText() throws Exception {
+        // sttService.available() 기본 false
+        stubAnswer("답", grounded("답변입니다.", new SourceCitation("doc.md", 1L, "...", 0.9)));
+
+        utter("브라우저 단독 텍스트");
+
+        assertThat(capturedUserText()).isEqualTo("브라우저 단독 텍스트");
+        verify(sttService, never()).transcribe(any(), any());
     }
 }

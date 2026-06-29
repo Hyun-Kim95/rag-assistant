@@ -85,6 +85,12 @@ voice:
     language-code: ko-KR
     voice-name: ko-KR-Neural2-A     # Neural2 한국어 음성 (저지연)
     speaking-rate: 1.0
+  stt:
+    enabled: false                  # 기본 off(브라우저 Web Speech 단독). 클라우드 STT 쓰려면 local에서 true + llm.openai-compat.api-key(Groq)
+    model: whisper-large-v3-turbo   # Groq 다국어 전사 모델 (무료 티어: 20 RPM / 2000 RPD)
+    language: ko
+    base-url: https://api.groq.com/openai/v1   # llm.openai-compat.base-url과 동일(키 재사용)
+    timeout-ms: 15000
 
 logging:
   level:

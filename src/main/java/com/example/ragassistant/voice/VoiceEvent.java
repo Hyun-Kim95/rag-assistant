@@ -52,4 +52,18 @@ public record VoiceEvent(
     public static VoiceEvent notice(String text) {
         return new VoiceEvent("notice", text, null, null, null, null, null, null, null);
     }
+
+    /**
+     * STT 모드 안내(연결 직후 1회). text="cloud"면 클라이언트가 오디오를 녹음·전송, "browser"면 텍스트만 전송.
+     */
+    public static VoiceEvent sttMode(String mode) {
+        return new VoiceEvent("stt.mode", mode, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * 클라우드 STT 확정 전사. 클라이언트가 직전 사용자 말풍선 텍스트를 이 값으로 보정한다.
+     */
+    public static VoiceEvent sttFinal(String text) {
+        return new VoiceEvent("stt.final", text, null, null, null, null, null, null, null);
+    }
 }
