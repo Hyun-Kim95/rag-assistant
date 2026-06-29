@@ -413,3 +413,31 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm
 - 스트리밍 최종 답은 생성 완료 후 조각 전송(진짜 토큰 스트리밍 아님).
 - 에이전트 leg 모델이 `/api/chat`과 공유 — 에이전트 전용 모델 분리 미적용.
 - 소형 모델 tool calling 규율은 여전히 모델 의존(상한·강제 종결로 답은 보장하나 과호출 자체는 모델 품질에 좌우).
+
+## 19. 운영 지표 관측 (Metrics & Observability, 2026-06)
+
+### 배경 / 목표
+- 구조적 요청 로그(§12)는 휘발성 INFO 한 줄이라 **P95·토큰 비용 같은 분위수·합계**를 뽑기 어렵다. 채널별(chat·agent·voice) **품질·지연·비용·신뢰 지표를 집계 API로 조회**하는 최소 관측 레이어를 추가한다.
+- 외부 메트릭 수집기/시계열 DB(Prometheus·Grafana·OTel)·실시간 알림·과금/청구는 범위 밖. 토큰 비용은 **사용자 과금이 아니라 운영 비용 추정(operational cost)** 이다.
+- 기존 `/api/chat`·`/api/agent`·voice 경로는 건드리지 않는다(회귀 0, 지표 적재는 부가 1회).
+
+### 선택
+- **영속화 = 신규 `query_logs` 테이블**(대안: 로그 파싱 / 인메모리 윈도우). chat/agent 인터랙션 1건 = 1행. voice `call_*`와 동일하게 `schema.sql`(`CREATE TABLE IF NOT EXISTS`)로 자동 생성 → 재현·집계 용이, 운영 일관. **질문 원문·답변 본문은 저장하지 않는다**(지표·메타만 → 기존 텔레메트리 PII 회피 계승).
+- **분위수 = PostgreSQL `percentile_cont`**(대안: 앱 메모리 계산). 네이티브·대량 OK, "평균 금지" 원칙에 맞춰 P95를 1차 기준(P50·P99 병기).
+- **적재 지점 = `QueryTelemetryContext.endAndLog()`의 finally**. `QueryLogWriter`로 스냅샷 1행. **적재 실패는 요청을 막지 않는다**(통화 로그와 동일 철학, 예외 흡수). 신규 쓰기 엔드포인트 없음.
+- **토큰·비용**: provider 응답에서 추출(Ollama `prompt_eval_count`/`eval_count`, OpenAI-호환 `usage`, 미제공 시 `null`). `estimated_cost = Σ(토큰 × metrics.cost.providers.<name> 단가)`. 로컬(Ollama)은 단가 0(=금전비용 0). 실단가: groq `llama-3.1-8b-instant` $0.05/1M in·$0.08/1M out.
+- **집계 API `GET /api/metrics/summary`**: 기간·채널·provider 필터로 품질(grounded/no-answer)·지연(P50/P95/P99 + 단계 P95)·비용(토큰 avg/P95·provider 분해)·신뢰(voice handoff/완료율)·채널별 North Star(chat→groundedRate, voice→taskCompletionRate). voice는 `query_logs`가 아니라 `call_sessions`/`call_turns`에서 집계(중복 적재 없음).
+- **추이 API `GET /api/metrics/timeseries`(드리프트)**: 기간을 `bucket`(day 기본·week·hour)으로 쪼개 버킷별 시계열. **eval 리포트(`runs/`)가 아니라 `query_logs` 시간축 집계**(`date_trunc(bucket, created_at)` GROUP BY)를 재사용한다. `bucket`은 식별자라 바인딩 불가 → 서버 화이트리스트(`hour|day|week`)로만 SQL 주입 차단.
+- **상태/오류 계약**: 0건 구간은 200 + 지표 `null`(빈 상태, 오류 아님). `from>to`는 **400**(기존 `ErrorResponse` 재사용). `metrics.enabled=false`면 적재 안 하고 집계/추이 API는 **404**.
+- **대시보드(선택, 채택)**: `static/metrics.html` + `js/metrics.js` 읽기 전용 1페이지. 의존성 없는 인라인 SVG 라인차트로 추이 표시, 기존 `app.css` 토큰 재사용. 로딩/빈/오류/비활성(404) 상태 처리.
+- **RAGAS 연동 = 보류(안 함)**: faithfulness/answer-relevancy/context-precision(LLM-as-judge)은 **무료·로컬 PoC 전제상 비용 대비 효용이 낮아 미착수**. RAGAS는 Python 스택이라 스택 이원화 비용도 큼. 이미 `grounded` 플래그 + 룰 기반 eval(§13) + 드리프트 뷰로 기본 품질 모니터링은 충족. 착수 트리거: 유료 전환으로 judge 예산 확보 또는 품질 SLO 도입 시.
+
+### 구현 위치
+- `observability/`(`QueryLog`·`QueryLogWriter`, `QueryTelemetry`/`QueryTelemetryContext`에 토큰·채널·stopReason 확장), `repository/QueryLogRepository`(insert·summarize·timeseries)·`CallLogRepository`(`summarizeSessions`), `metrics/MetricsService`, `controller/MetricsController`(`/api/metrics/summary`·`/timeseries`), `dto/MetricsSummaryResponse`·`MetricsTimeseriesResponse`, `config/MetricsProperties`·`AppConfig`(텔레메트리 와이어링), `llm/`(`OllamaChatClient`·`OpenAiCompatChatClient`·`agent/OllamaAgentClient`·`agent/OpenAiCompatAgentClient`에 토큰 기록), `agent/AgentOrchestrator`(begin/recordChannel/endAndLog).
+- `resources/schema.sql`(`query_logs` + 인덱스), `resources/application.yml`(`metrics.*`), `static/metrics.html`·`js/metrics.js`·`css/app.css`, `index.html`(대시보드 링크).
+
+### 한계
+- 온라인(운영) 환각률은 정답 라벨이 없어 직접 산출 불가 → `groundedRate`·`noAnswerRate`를 대리지표로, 정밀 환각률은 eval 세트(§13)에서 본다.
+- voice 토큰·비용은 미수집(후속). voice는 `call_*` 기반 신뢰 지표만 집계.
+- LLM-as-judge 정성 평가(RAGAS) 미적용(위 보류 결정).
+- `/api/metrics/*`·`/metrics.html`은 로컬 비인증. 운영 노출 시 권한 가드는 별도 합의.

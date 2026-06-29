@@ -625,7 +625,7 @@ query requestId=ab12cd34 hits=8 topScore=0.8312 grounded=true noAnswer=- embedMs
 
 ### 지표 영속화 (`query_logs`)
 
-구조적 로그(휘발성)만으로는 P95·토큰 비용 같은 **분위수·합계**를 뽑기 어렵다. `chat`/`agent` 인터랙션 1건 = `query_logs` 1행으로 적재해 SQL로 집계한다. 질문 원문·답변 본문은 저장하지 않는다(지표만 → PII 회피). Voice는 기존 `call_sessions`/`call_turns`를 재사용한다.
+구조적 로그(휘발성)만으로는 P95·토큰 비용 같은 **분위수·합계**를 뽑기 어렵다. `chat`/`agent` 인터랙션 1건 = `query_logs` 1행으로 적재해 SQL로 집계한다. 질문 원문·답변 본문은 저장하지 않는다(지표만 → PII 회피). Voice는 기존 `call_sessions`/`call_turns`를 재사용한다. (설계 선택·근거: `[DECISIONS.md](DECISIONS.md)` §19 — `query_logs` vs Prometheus, `percentile_cont`, 비용 추정, RAGAS 보류)
 
 - `QueryTelemetryContext.endAndLog()`가 finally에서 `QueryLogWriter`로 스냅샷 1행을 적재한다. 적재 실패는 **요청을 막지 않는다**(통화 로그와 동일 철학).
 - 토큰은 provider 응답에서 추출해 누적한다: Ollama `prompt_eval_count`/`eval_count`, OpenAI-호환 `usage`. 미제공 시 `null`.

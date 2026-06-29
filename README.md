@@ -9,7 +9,7 @@ Ollama와 PostgreSQL pgvector로 업로드 문서를 검색해 답하는 Spring 
 검색: hybrid(`pg_trgm` + RRF, `rag.hybrid-enabled` 기본 `true`) + rerank(TEI cross-encoder `bge-reranker-v2-m3`, `rag.rerank-enabled` 기본 `true`, 미기동 시 fallback) 
 라우팅: Model Router — chat 추론을 다중 provider로 분기·폴백(Ollama primary + OpenAI 호환 SaaS leg, 예: Groq). 설정/요청 기준 라우팅, 실패 시 자동 폴백 (`[DECISIONS.md](docs/DECISIONS.md)` §15). 옵트인으로 **난이도 기반 라우팅**(`llm.routing-strategy: difficulty` — 분류기 `qwen2.5:3b`로 질문을 EASY/HARD 판정 → 작은/큰 모델 분기, 기본은 `fixed`) ([§16](docs/DECISIONS.md))
 에이전트: tool calling 에이전트 — LLM이 필요 시 도구(`search_documents`·`list_documents`·`read_document`·`summarize_document`)를 스스로 호출해 멀티스텝으로 답을 구성. 멀티턴 대화 메모리(무상태 `messages[]`)와 스트리밍 스텝 UI(`POST /api/agent`·`/api/agent/stream`, `[DECISIONS.md](docs/DECISIONS.md)` §17·§18)
-관측성: chat/agent 인터랙션을 `query_logs`에 적재하고, `GET /api/metrics/summary`로 품질(grounded/no-answer)·지연(P50/P95/P99)·토큰·추정 비용·채널별 North Star를 집계. 읽기 전용 대시보드 `/metrics.html` 제공 (`[ARCHITECTURE.md](docs/ARCHITECTURE.md)` §12)
+관측성: chat/agent 인터랙션을 `query_logs`에 적재하고, `GET /api/metrics/summary`로 품질(grounded/no-answer)·지연(P50/P95/P99)·토큰·추정 비용·채널별 North Star를 집계, `GET /api/metrics/timeseries`로 시간축 추이(드리프트)를 제공. 읽기 전용 대시보드 `/metrics.html` 제공 (`[ARCHITECTURE.md](docs/ARCHITECTURE.md)` §12 · `[DECISIONS.md](docs/DECISIONS.md)` §19)
 
 설계·선택 이유: `[docs/DECISIONS.md](docs/DECISIONS.md)` · API·DB·설정: `[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)`
 
