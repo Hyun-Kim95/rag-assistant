@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>지표 대시보드 · RAG Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="header-row">
+        <div>
+          <h1>지표 대시보드</h1>
+          <p>품질·지연·비용·신뢰 지표 (chat · agent · voice)</p>
+        </div>
+        <a class="header-link" href="/">← 채팅으로</a>
+      </div>
+    </header>
+
+    <div id="error-banner" class="banner banner--error" role="alert" aria-live="polite">
+      <span class="banner__icon" aria-hidden="true">!</span>
+      <span id="error-banner-text" class="banner__text"></span>
+      <button id="error-banner-close" type="button" class="banner__close" aria-label="오류 닫기">&times;</button>
+    </div>
+
+    <main class="card">
+      <form id="filter-form" class="toolbar">
+        <div class="field">
+          <label class="field__label" for="channel-select">채널</label>
+          <select id="channel-select" class="field__control">
+            <option value="all">전체 (all)</option>
+            <option value="chat">chat</option>
+            <option value="agent">agent</option>
+            <option value="voice">voice</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="from-input">시작 (선택)</label>
+          <input id="from-input" class="field__control" type="datetime-local">
+        </div>
+        <div class="field">
+          <label class="field__label" for="to-input">종료 (선택)</label>
+          <input id="to-input" class="field__control" type="datetime-local">
+        </div>
+        <div class="field">
+          <label class="field__label" for="provider-input">provider (선택)</label>
+          <input id="provider-input" class="field__control" type="text" placeholder="groq / ollama-7b" autocomplete="off">
+        </div>
+        <div class="toolbar__actions">
+          <button id="refresh-btn" type="submit" class="btn btn--primary">조회</button>
+        </div>
+      </form>
+
+      <div id="state-loading" class="metrics-state" aria-live="polite" aria-busy="false">
+        <span class="spinner spinner--dark" aria-hidden="true"></span>
+        <span>지표를 불러오는 중…</span>
+      </div>
+
+      <div id="state-empty" class="metrics-state">
+        선택한 기간·채널에 데이터가 없습니다.
+      </div>
+
+      <div id="state-disabled" class="metrics-state metrics-state--warn">
+        메트릭 기능이 비활성화되어 있습니다 (<code>metrics.enabled=false</code>).
+      </div>
+
+      <div id="metrics-content" class="metrics-content" hidden>
+        <p id="range-caption" class="kpi__sub" style="margin-bottom:16px;"></p>
+
+        <section class="metrics-section" aria-labelledby="ns-title">
+          <h2 id="ns-title" class="metrics-section__title">North Star</h2>
+          <div class="kpi-grid">
+            <div class="kpi kpi--accent">
+              <p class="kpi__label">chat · groundedRate</p>
+              <p class="kpi__value" id="ns-chat">–</p>
+              <p class="kpi__sub">근거 기반 응답 비율</p>
+            </div>
+            <div class="kpi kpi--accent">
+              <p class="kpi__label">voice · taskCompletionRate</p>
+              <p class="kpi__value" id="ns-voice">–</p>
+              <p class="kpi__sub">통화 과업 완료율</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="counts-title">
+          <h2 id="counts-title" class="metrics-section__title">건수 · 품질</h2>
+          <div class="kpi-grid">
+            <div class="kpi">
+              <p class="kpi__label">인터랙션</p>
+              <p class="kpi__value" id="m-interactions">–</p>
+              <p class="kpi__sub">chat + agent</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">음성 세션</p>
+              <p class="kpi__value" id="m-sessions">–</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">grounded 비율</p>
+              <p class="kpi__value" id="m-grounded">–</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">no-answer 비율</p>
+              <p class="kpi__value" id="m-noanswer">–</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="latency-title">
+          <h2 id="latency-title" class="metrics-section__title">지연 (ms)</h2>
+          <div class="kpi-grid">
+            <div class="kpi">
+              <p class="kpi__label">P50</p>
+              <p class="kpi__value" id="m-p50">–</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">P95</p>
+              <p class="kpi__value" id="m-p95">–</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">P99</p>
+              <p class="kpi__value" id="m-p99">–</p>
+            </div>
+          </div>
+          <table class="data-table" id="stage-table" style="margin-top:12px;">
+            <thead>
+              <tr>
+                <th>단계별 P95</th>
+                <th class="num">embed</th>
+                <th class="num">retrieve</th>
+                <th class="num">rerank</th>
+                <th class="num">gen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>ms</td>
+                <td class="num" id="m-embed">–</td>
+                <td class="num" id="m-retrieve">–</td>
+                <td class="num" id="m-rerank">–</td>
+                <td class="num" id="m-gen">–</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="cost-title">
+          <h2 id="cost-title" class="metrics-section__title">
+            비용 · 토큰 <span class="muted">(운영 비용 추정 · 사용자 과금 무관)</span>
+          </h2>
+          <div class="kpi-grid">
+            <div class="kpi">
+              <p class="kpi__label">인터랙션당 토큰</p>
+              <p class="kpi__value" id="m-tokens-avg">–</p>
+              <p class="kpi__sub" id="m-tokens-p95"></p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">인터랙션당 비용</p>
+              <p class="kpi__value" id="m-cost">–</p>
+              <p class="kpi__sub" id="m-currency"></p>
+            </div>
+          </div>
+          <table class="data-table" id="provider-table" style="margin-top:12px;">
+            <thead>
+              <tr>
+                <th>provider</th>
+                <th class="num">인터랙션</th>
+                <th class="num">인터랙션당 비용</th>
+              </tr>
+            </thead>
+            <tbody id="provider-tbody"></tbody>
+          </table>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="reliability-title">
+          <h2 id="reliability-title" class="metrics-section__title">신뢰 (voice)</h2>
+          <div class="kpi-grid">
+            <div class="kpi">
+              <p class="kpi__label">handoff 비율</p>
+              <p class="kpi__value" id="m-handoff">–</p>
+              <p class="kpi__sub">상담원 전환율</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">과업 완료율</p>
+              <p class="kpi__value" id="m-completion">–</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="drift-title">
+          <h2 id="drift-title" class="metrics-section__title">
+            추이 (Drift) <span class="muted">기간별 품질·지연·검색 변화 (chat/agent)</span>
+          </h2>
+          <div class="field" style="margin-bottom:12px; max-width:160px;">
+            <label class="field__label" for="bucket-select">버킷</label>
+            <select id="bucket-select" class="field__control">
+              <option value="day">일별</option>
+              <option value="week">주별</option>
+              <option value="hour">시간별</option>
+            </select>
+          </div>
+          <div id="drift-empty" class="metrics-state">선택한 기간·채널에 추이 데이터가 없습니다.</div>
+          <div id="drift-charts" class="chart-grid"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/metrics.js"></script>
+</body>
+</html>
